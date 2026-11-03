@@ -1,0 +1,461 @@
+{
+  "WARNING": "For scoring only. The matching engine must never read this file.",
+  "seed": 2026,
+  "total_planted": 44,
+  "planted_exceptions": [
+    {
+      "type": "amount_mismatch",
+      "order_ref": "ORD-00005",
+      "settlement_ref": "PR-000005",
+      "bank_ref": "BNK-000003",
+      "amount_at_risk_kobo": 6000,
+      "note": "Order is NGN 84374.00 but the processor settled a gross of NGN 84434.00."
+    },
+    {
+      "type": "amount_mismatch",
+      "order_ref": "ORD-00136",
+      "settlement_ref": "PR-000134",
+      "bank_ref": "BNK-000024",
+      "amount_at_risk_kobo": 5700,
+      "note": "Order is NGN 85344.00 but the processor settled a gross of NGN 85401.00."
+    },
+    {
+      "type": "amount_mismatch",
+      "order_ref": "ORD-00193",
+      "settlement_ref": "PR-000190",
+      "bank_ref": "BNK-000004",
+      "amount_at_risk_kobo": 8000,
+      "note": "Order is NGN 3914.00 but the processor settled a gross of NGN 3834.00."
+    },
+    {
+      "type": "amount_mismatch",
+      "order_ref": "ORD-00235",
+      "settlement_ref": "PR-000232",
+      "bank_ref": "BNK-000008",
+      "amount_at_risk_kobo": 3000,
+      "note": "Order is NGN 51679.00 but the processor settled a gross of NGN 51709.00."
+    },
+    {
+      "type": "amount_mismatch",
+      "order_ref": "ORD-00353",
+      "settlement_ref": "PR-000350",
+      "bank_ref": "BNK-000021",
+      "amount_at_risk_kobo": 9200,
+      "note": "Order is NGN 112905.00 but the processor settled a gross of NGN 112813.00."
+    },
+    {
+      "type": "amount_mismatch",
+      "order_ref": "ORD-00372",
+      "settlement_ref": "PR-000368",
+      "bank_ref": "BNK-000008",
+      "amount_at_risk_kobo": 8200,
+      "note": "Order is NGN 140571.00 but the processor settled a gross of NGN 140489.00."
+    },
+    {
+      "type": "amount_mismatch",
+      "order_ref": "ORD-00406",
+      "settlement_ref": "PR-000402",
+      "bank_ref": "BNK-000005",
+      "amount_at_risk_kobo": 2400,
+      "note": "Order is NGN 107192.00 but the processor settled a gross of NGN 107168.00."
+    },
+    {
+      "type": "amount_mismatch",
+      "order_ref": "ORD-00437",
+      "settlement_ref": "PR-000432",
+      "bank_ref": "BNK-000023",
+      "amount_at_risk_kobo": 7500,
+      "note": "Order is NGN 27563.00 but the processor settled a gross of NGN 27488.00."
+    },
+    {
+      "type": "duplicate",
+      "order_ref": "ORD-00022",
+      "settlement_ref": "PR-000022",
+      "bank_ref": "BNK-000030",
+      "amount_at_risk_kobo": 11409255,
+      "note": "The same order appears twice in the settlement report."
+    },
+    {
+      "type": "duplicate",
+      "order_ref": "ORD-00081",
+      "settlement_ref": "PR-000080",
+      "bank_ref": "BNK-000028",
+      "amount_at_risk_kobo": 9490770,
+      "note": "The same order appears twice in the settlement report."
+    },
+    {
+      "type": "duplicate",
+      "order_ref": "ORD-00096",
+      "settlement_ref": "PR-000096",
+      "bank_ref": "BNK-000013",
+      "amount_at_risk_kobo": 930726,
+      "note": "The same order appears twice in the settlement report."
+    },
+    {
+      "type": "duplicate",
+      "order_ref": "ORD-00285",
+      "settlement_ref": "PR-000283",
+      "bank_ref": "BNK-000010",
+      "amount_at_risk_kobo": 9175570,
+      "note": "The same order appears twice in the settlement report."
+    },
+    {
+      "type": "duplicate",
+      "order_ref": "ORD-00299",
+      "settlement_ref": "PR-000298",
+      "bank_ref": "BNK-000031",
+      "amount_at_risk_kobo": 8830229,
+      "note": "The same order appears twice in the settlement report."
+    },
+    {
+      "type": "duplicate",
+      "order_ref": "ORD-00483",
+      "settlement_ref": "PR-000478",
+      "bank_ref": "BNK-000013",
+      "amount_at_risk_kobo": 8773395,
+      "note": "The same order appears twice in the settlement report."
+    },
+    {
+      "type": "fee_discrepancy",
+      "order_ref": "ORD-00015",
+      "settlement_ref": "PR-000014",
+      "bank_ref": "BNK-000026",
+      "amount_at_risk_kobo": 16500,
+      "note": "Fee charged is NGN 754.98; the agreed rate gives NGN 589.98."
+    },
+    {
+      "type": "fee_discrepancy",
+      "order_ref": "ORD-00026",
+      "settlement_ref": "PR-000026",
+      "bank_ref": "BNK-000012",
+      "amount_at_risk_kobo": 18400,
+      "note": "Fee charged is NGN 594.09; the agreed rate gives NGN 410.09."
+    },
+    {
+      "type": "fee_discrepancy",
+      "order_ref": "ORD-00195",
+      "settlement_ref": "PR-000192",
+      "bank_ref": "BNK-000028",
+      "amount_at_risk_kobo": 2500,
+      "note": "Fee charged is NGN 2025.00; the agreed rate gives NGN 2000.00."
+    },
+    {
+      "type": "fee_discrepancy",
+      "order_ref": "ORD-00200",
+      "settlement_ref": "PR-000197",
+      "bank_ref": "BNK-000009",
+      "amount_at_risk_kobo": 11300,
+      "note": "Fee charged is NGN 1239.79; the agreed rate gives NGN 1126.79."
+    },
+    {
+      "type": "fee_discrepancy",
+      "order_ref": "ORD-00365",
+      "settlement_ref": "PR-000362",
+      "bank_ref": "BNK-000021",
+      "amount_at_risk_kobo": 5300,
+      "note": "Fee charged is NGN 1257.26; the agreed rate gives NGN 1204.26."
+    },
+    {
+      "type": "fee_discrepancy",
+      "order_ref": "ORD-00402",
+      "settlement_ref": "PR-000398",
+      "bank_ref": "BNK-000012",
+      "amount_at_risk_kobo": 13700,
+      "note": "Fee charged is NGN 1949.72; the agreed rate gives NGN 1812.72."
+    },
+    {
+      "type": "fee_discrepancy",
+      "order_ref": "ORD-00461",
+      "settlement_ref": "PR-000455",
+      "bank_ref": "BNK-000023",
+      "amount_at_risk_kobo": 9400,
+      "note": "Fee charged is NGN 2094.00; the agreed rate gives NGN 2000.00."
+    },
+    {
+      "type": "fee_discrepancy",
+      "order_ref": "ORD-00488",
+      "settlement_ref": "PR-000483",
+      "bank_ref": "BNK-000019",
+      "amount_at_risk_kobo": 16700,
+      "note": "Fee charged is NGN 2124.80; the agreed rate gives NGN 1957.80."
+    },
+    {
+      "type": "missing_settlement",
+      "order_ref": "ORD-00009",
+      "settlement_ref": null,
+      "bank_ref": null,
+      "amount_at_risk_kobo": 9869000,
+      "note": "Order has no line in the settlement report."
+    },
+    {
+      "type": "missing_settlement",
+      "order_ref": "ORD-00029",
+      "settlement_ref": null,
+      "bank_ref": null,
+      "amount_at_risk_kobo": 3367100,
+      "note": "Order has no line in the settlement report."
+    },
+    {
+      "type": "missing_settlement",
+      "order_ref": "ORD-00042",
+      "settlement_ref": null,
+      "bank_ref": null,
+      "amount_at_risk_kobo": 14480700,
+      "note": "Order has no line in the settlement report."
+    },
+    {
+      "type": "missing_settlement",
+      "order_ref": "ORD-00111",
+      "settlement_ref": null,
+      "bank_ref": null,
+      "amount_at_risk_kobo": 11850900,
+      "note": "Order has no line in the settlement report."
+    },
+    {
+      "type": "missing_settlement",
+      "order_ref": "ORD-00118",
+      "settlement_ref": null,
+      "bank_ref": null,
+      "amount_at_risk_kobo": 7200600,
+      "note": "Order has no line in the settlement report."
+    },
+    {
+      "type": "missing_settlement",
+      "order_ref": "ORD-00147",
+      "settlement_ref": null,
+      "bank_ref": null,
+      "amount_at_risk_kobo": 12187600,
+      "note": "Order has no line in the settlement report."
+    },
+    {
+      "type": "missing_settlement",
+      "order_ref": "ORD-00315",
+      "settlement_ref": null,
+      "bank_ref": null,
+      "amount_at_risk_kobo": 8518500,
+      "note": "Order has no line in the settlement report."
+    },
+    {
+      "type": "missing_settlement",
+      "order_ref": "ORD-00319",
+      "settlement_ref": null,
+      "bank_ref": null,
+      "amount_at_risk_kobo": 7386300,
+      "note": "Order has no line in the settlement report."
+    },
+    {
+      "type": "missing_settlement",
+      "order_ref": "ORD-00371",
+      "settlement_ref": null,
+      "bank_ref": null,
+      "amount_at_risk_kobo": 10759400,
+      "note": "Order has no line in the settlement report."
+    },
+    {
+      "type": "missing_settlement",
+      "order_ref": "ORD-00418",
+      "settlement_ref": null,
+      "bank_ref": null,
+      "amount_at_risk_kobo": 526600,
+      "note": "Order has no line in the settlement report."
+    },
+    {
+      "type": "missing_settlement",
+      "order_ref": "ORD-00443",
+      "settlement_ref": null,
+      "bank_ref": null,
+      "amount_at_risk_kobo": 13870000,
+      "note": "Order has no line in the settlement report."
+    },
+    {
+      "type": "missing_settlement",
+      "order_ref": "ORD-00492",
+      "settlement_ref": null,
+      "bank_ref": null,
+      "amount_at_risk_kobo": 8171000,
+      "note": "Order has no line in the settlement report."
+    },
+    {
+      "type": "orphan_bank_credit",
+      "order_ref": null,
+      "settlement_ref": null,
+      "bank_ref": "BNK-000001",
+      "amount_at_risk_kobo": 10744600,
+      "note": "Bank credit with no matching settlement batch."
+    },
+    {
+      "type": "orphan_bank_credit",
+      "order_ref": null,
+      "settlement_ref": null,
+      "bank_ref": "BNK-000011",
+      "amount_at_risk_kobo": 13523100,
+      "note": "Bank credit with no matching settlement batch."
+    },
+    {
+      "type": "orphan_bank_credit",
+      "order_ref": null,
+      "settlement_ref": null,
+      "bank_ref": "BNK-000014",
+      "amount_at_risk_kobo": 15905200,
+      "note": "Bank credit with no matching settlement batch."
+    },
+    {
+      "type": "orphan_bank_credit",
+      "order_ref": null,
+      "settlement_ref": null,
+      "bank_ref": "BNK-000027",
+      "amount_at_risk_kobo": 5940300,
+      "note": "Bank credit with no matching settlement batch."
+    },
+    {
+      "type": "timing_break",
+      "order_ref": "ORD-00068",
+      "settlement_ref": "PR-000066",
+      "bank_ref": "BNK-000028",
+      "amount_at_risk_kobo": 720330,
+      "note": "Settled 11 days after the order; expected within 3 days."
+    },
+    {
+      "type": "timing_break",
+      "order_ref": "ORD-00255",
+      "settlement_ref": "PR-000252",
+      "bank_ref": "BNK-000030",
+      "amount_at_risk_kobo": 10871642,
+      "note": "Settled 10 days after the order; expected within 3 days."
+    },
+    {
+      "type": "timing_break",
+      "order_ref": "ORD-00338",
+      "settlement_ref": "PR-000335",
+      "bank_ref": "BNK-000019",
+      "amount_at_risk_kobo": 2267470,
+      "note": "Settled 9 days after the order; expected within 3 days."
+    },
+    {
+      "type": "timing_break",
+      "order_ref": "ORD-00363",
+      "settlement_ref": "PR-000360",
+      "bank_ref": "BNK-000033",
+      "amount_at_risk_kobo": 10063351,
+      "note": "Settled 8 days after the order; expected within 3 days."
+    },
+    {
+      "type": "timing_break",
+      "order_ref": "ORD-00415",
+      "settlement_ref": "PR-000411",
+      "bank_ref": "BNK-000034",
+      "amount_at_risk_kobo": 13050462,
+      "note": "Settled 12 days after the order; expected within 3 days."
+    },
+    {
+      "type": "timing_break",
+      "order_ref": "ORD-00495",
+      "settlement_ref": "PR-000489",
+      "bank_ref": "BNK-000018",
+      "amount_at_risk_kobo": 2043382,
+      "note": "Settled 9 days after the order; expected within 3 days."
+    }
+  ],
+  "mangled_references_not_exceptions": [
+    {
+      "order_ref": "ORD-00014",
+      "appears_as": "ORD00014"
+    },
+    {
+      "order_ref": "ORD-00067",
+      "appears_as": "ord-00067"
+    },
+    {
+      "order_ref": "ORD-00073",
+      "appears_as": "ORD00073"
+    },
+    {
+      "order_ref": "ORD-00079",
+      "appears_as": "ord-00079"
+    },
+    {
+      "order_ref": "ORD-00080",
+      "appears_as": "ORD 00080"
+    },
+    {
+      "order_ref": "ORD-00134",
+      "appears_as": "ord-00134"
+    },
+    {
+      "order_ref": "ORD-00155",
+      "appears_as": "ORD00155"
+    },
+    {
+      "order_ref": "ORD-00156",
+      "appears_as": "ord-00156"
+    },
+    {
+      "order_ref": "ORD-00181",
+      "appears_as": "ord-00181"
+    },
+    {
+      "order_ref": "ORD-00271",
+      "appears_as": "ord-00271"
+    },
+    {
+      "order_ref": "ORD-00290",
+      "appears_as": "ORD 00290"
+    },
+    {
+      "order_ref": "ORD-00301",
+      "appears_as": "ORD00301"
+    },
+    {
+      "order_ref": "ORD-00304",
+      "appears_as": "ORD00304"
+    },
+    {
+      "order_ref": "ORD-00305",
+      "appears_as": "ORD00305"
+    },
+    {
+      "order_ref": "ORD-00309",
+      "appears_as": "ORD00309"
+    },
+    {
+      "order_ref": "ORD-00330",
+      "appears_as": "ORD00330"
+    },
+    {
+      "order_ref": "ORD-00350",
+      "appears_as": "ord-00350"
+    },
+    {
+      "order_ref": "ORD-00382",
+      "appears_as": "ORD 00382"
+    },
+    {
+      "order_ref": "ORD-00387",
+      "appears_as": "ORD 00387"
+    },
+    {
+      "order_ref": "ORD-00414",
+      "appears_as": "ORD 00414"
+    },
+    {
+      "order_ref": "ORD-00420",
+      "appears_as": "ord-00420"
+    },
+    {
+      "order_ref": "ORD-00426",
+      "appears_as": "ORD 00426"
+    },
+    {
+      "order_ref": "ORD-00428",
+      "appears_as": "ord-00428"
+    },
+    {
+      "order_ref": "ORD-00433",
+      "appears_as": "ORD00433"
+    },
+    {
+      "order_ref": "ORD-00479",
+      "appears_as": "ORD00479"
+    }
+  ]
+}
