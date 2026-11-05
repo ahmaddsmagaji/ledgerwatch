@@ -238,7 +238,9 @@ def run_classification(session: Session) -> ClassifyResult:
         elif m.tier == MatchTier.BATCH_MANY_TO_ONE:
             bank_links[m.settlement_id] = m.bank_txn_id
 
-    result = classify(orders, lines, bank, order_links, bank_links)
+    from app.matching.review_queue import classify_with_review  # local import avoids a cycle
+
+    result = classify_with_review(orders, lines, bank, order_links, bank_links)
 
     existing = {
         (e.type, e.order_id, e.settlement_id, e.bank_txn_id): e

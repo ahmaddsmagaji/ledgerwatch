@@ -18,6 +18,7 @@ class ExceptionType(str, enum.Enum):
     FEE_DISCREPANCY = "fee_discrepancy"
     TIMING_BREAK = "timing_break"
     ORPHAN_BANK_CREDIT = "orphan_bank_credit"
+    NEEDS_REVIEW = "needs_review"
 
 
 class ExceptionStatus(str, enum.Enum):
