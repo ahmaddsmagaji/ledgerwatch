@@ -55,9 +55,9 @@ def test_summary_matches_the_pipeline(client):
     s = client.get("/api/summary").json()
     assert s["orders_total"] == 500
     assert s["exceptions_total"] == len(PLANTED) == 44
-    assert {k: v["count"] for k, v in s["by_type"].items()} == dict(
-        Counter(e["type"] for e in PLANTED)
-    )
+    expected_counts = dict(Counter(e["type"] for e in PLANTED))
+    expected_counts["needs_review"] = 0
+    assert {k: v["count"] for k, v in s["by_type"].items()} == expected_counts
     assert s["orders_matched"] == s["orders_total"] - s["by_type"]["missing_settlement"]["count"]
     assert s["unresolved_at_risk_kobo"] == sum(e["amount_at_risk_kobo"] for e in PLANTED)
     assert s["by_status"] == {"open": 44, "escalated": 0, "resolved": 0}
