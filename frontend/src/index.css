@@ -1,27 +1,18 @@
-:root {
-  --bg: #f7f7f5;
-  --surface: #ffffff;
-  --text: #1c1d1f;
-  --muted: #6b6f76;
-  --line: #e4e4e0;
-  --accent: #1f5f4a;
-  --danger-bg: #fdecec;
-  --danger-text: #8a1f1f;
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  color-scheme: light dark;
-}
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Public+Sans:wght@400;500;600&display=swap');
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #141517;
-    --surface: #1d1f22;
-    --text: #ececea;
-    --muted: #9a9ea5;
-    --line: #2b2e32;
-    --accent: #5fbf9f;
-    --danger-bg: #3a1c1c;
-    --danger-text: #f2b8b8;
-  }
+:root {
+  --mist: #eef0f5;
+  --paper: #fbfbfd;
+  --ink: #1b1a45;
+  --text: #1d2030;
+  --muted: #646a80;
+  --line: #dfe2ec;
+  --flag: #e8a317;
+  --danger-bg: #fbe9e5;
+  --danger-text: #8a2f1f;
+  --display: 'Bricolage Grotesque', 'Public Sans', system-ui, sans-serif;
+  --body: 'Public Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color-scheme: light;
 }
 
 * {
@@ -30,77 +21,121 @@
 
 body {
   margin: 0;
-  background: var(--bg);
+  background: var(--mist);
   color: var(--text);
-  line-height: 1.5;
+  font-family: var(--body);
+  line-height: 1.55;
+}
+
+:focus-visible {
+  outline: 3px solid var(--flag);
+  outline-offset: 2px;
+}
+
+.topbar {
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+}
+
+.brand {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.wordmark {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 1.2rem;
+  color: var(--ink);
+  letter-spacing: -0.01em;
 }
 
 .page {
-  max-width: 960px;
+  max-width: 1080px;
   margin: 0 auto;
-  padding: 32px 20px 64px;
-}
-
-.header h1 {
-  margin: 0;
-  font-size: 1.6rem;
-  letter-spacing: -0.01em;
+  padding: 28px 20px 72px;
 }
 
 .muted {
   color: var(--muted);
-  margin: 4px 0 24px;
 }
 
-h2 {
-  font-size: 1.05rem;
-  margin: 32px 0 12px;
-}
-
-.tiles {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-  gap: 12px;
-}
-
-.tile {
-  background: var(--surface);
+.hero {
+  background: var(--paper);
   border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 16px;
+  border-radius: 18px;
+  padding: 32px;
 }
 
-.tile-label {
+.hero-title {
+  margin: 0;
+  max-width: 24ch;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: clamp(1.7rem, 4.5vw, 2.6rem);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.hero-sub {
+  margin: 10px 0 24px;
   color: var(--muted);
-  font-size: 0.82rem;
+  max-width: 60ch;
 }
 
-.tile-value {
-  font-size: 1.5rem;
-  font-weight: 600;
-  margin-top: 4px;
-  font-variant-numeric: tabular-nums;
+.bar {
+  display: flex;
+  gap: 3px;
+  height: 20px;
+  border-radius: 10px;
+  overflow: hidden;
+  transform-origin: left;
+  animation: reveal 0.8s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.seg {
+  min-width: 6px;
+}
+
+@keyframes reveal {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar {
+    animation: none;
+  }
+}
+
+.table-wrap {
+  margin-top: 20px;
+  overflow-x: auto;
 }
 
 .table {
   width: 100%;
   border-collapse: collapse;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  overflow: hidden;
+  font-variant-numeric: tabular-nums;
 }
 
 .table th,
 .table td {
-  padding: 10px 14px;
+  padding: 11px 8px;
   text-align: left;
   border-bottom: 1px solid var(--line);
+  white-space: nowrap;
 }
 
 .table th {
   color: var(--muted);
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   font-weight: 500;
 }
 
@@ -110,14 +145,55 @@ h2 {
 
 .num {
   text-align: right !important;
+}
+
+.chip {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 4px;
+  margin-right: 10px;
+  vertical-align: -1px;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.fact {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 18px 20px;
+}
+
+.fact-label {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.fact-value {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 1.6rem;
+  color: var(--ink);
+  margin: 2px 0;
   font-variant-numeric: tabular-nums;
 }
 
+.fact-note {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
 .notice {
-  background: var(--surface);
+  background: var(--paper);
   border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 14px 16px;
+  border-radius: 14px;
+  padding: 14px 18px;
 }
 
 .notice-error {
@@ -127,7 +203,34 @@ h2 {
 }
 
 code {
-  background: var(--bg);
+  background: var(--mist);
   border-radius: 4px;
-  padding: 1px 5px;
+  padding: 1px 6px;
+}
+
+@media (max-width: 600px) {
+  .hero {
+    padding: 22px 18px;
+  }
+}
+
+/* Brand: black, white, signal green (from the Ledgerwatch logo) */
+:root {
+  --ink: #0b0b0b;
+  --brand-green: #00c853;
+  --flag: #00c853;
+}
+
+.topbar {
+  background: #000;
+  border-bottom: 0;
+}
+
+.wordmark {
+  color: #fff;
+}
+
+.hero-title,
+.fact-value {
+  color: #0b0b0b;
 }
