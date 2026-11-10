@@ -1,0 +1,24 @@
+export default function App() {
+  return (
+    <div style={{ padding: 24, maxWidth: 1100, margin: '0 auto' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <img src="/brand/logo.png" alt="Ledgerwatch" style={{ width: 32, height: 32, objectFit: 'contain' }} />
+        <h1 style={{ margin: 0 }}>Ledgerwatch</h1>
+      </div>
+      <p style={{ color: '#6B7280', fontSize: 18 }}>
+        Ledgerwatch helps businesses know whether the money they collected is the money they actually received.
+      </p>
+      <p><strong>Sync. Reconcile. Resolve.</strong></p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginTop: 24 }}>
+        <div style={{ background: 'white', border: '1px solid #E5E7EB', borderRadius: 16, padding: 20 }}><div>Flagged</div><h2>₦2,420,712.82</h2><div>44 exceptions</div></div>
+        <div style={{ background: 'white', border: '1px solid #E5E7EB', borderRadius: 16, padding: 20 }}><div>Transactions</div><h2>12,846</h2><div>Sample aggregate</div></div>
+        <div style={{ background: 'white', border: '1px solid #E5E7EB', borderRadius: 16, padding: 20 }}><div>Settlements Received</div><h2>₦46,920,000</h2><div>of ₦48,650,000</div></div>
+        <div style={{ background: 'white', border: '1px solid #E5E7EB', borderRadius: 16, padding: 20 }}><div>Reconciliation Rate</div><h2>96.4%</h2><div>37 open exceptions</div></div>
+      </div>
+      <div style={{ background: 'white', border: '1px solid #E5E7EB', borderRadius: 16, padding: 20, marginTop: 16 }}>
+        <p>✅ Step 1 done if you see: Logo at top + 4 cards + no error.</p>
+        <p>Not a bank. Not a payment gateway. We do not move money.</p>
+      </div>
+    </div>
+  );
+}
