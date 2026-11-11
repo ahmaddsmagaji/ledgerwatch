@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import "./App.css";
 
+const API_URL = "https://ledgerwatch-backend-v2.onrender.com";
+
 type BreakdownItem = { label: string; count: number; pct: string; amount: number };
 type OverviewData = { transactions: number; total_value: number; settlements_received: number; open_exceptions: number; reconciliation_rate: number; flagged_total: number; flagged_count: number; resolved_count: number; breakdown: BreakdownItem[] };
 type Txn = { id: string; reference: string; customer: string; amount: number; date: string; channel: string; status: string };
@@ -81,29 +83,29 @@ export default function App() {
   const [reportMsg, setReportMsg] = useState("");
 
   useEffect(() => {
-    fetch("http://localhost:8000/health").then((r) => r.json()).then((d) => setBackendStatus(`✅ Backend connected: ${d.status}`)).catch(() => setBackendStatus("❌ Backend NOT connected"));
-    fetch("http://localhost:8000/api/overview").then((r) => r.json()).then((d) => { if (d && typeof d === "object") { setOverview(d); setOverviewSource("Live from backend ✅"); } }).catch(() => {});
-    fetch("http://localhost:8000/api/transactions").then((r) => r.json()).then((d) => setTxns(asArray<Txn>(d))).catch(() => {});
-    fetch("http://localhost:8000/api/settlements").then((r) => r.json()).then((d) => setSettlements(asArray<Settlement>(d))).catch(() => {});
-    fetch("http://localhost:8000/api/exceptions").then((r) => r.json()).then((d) => setExceptions(asArray<Exc>(Array.isArray(d) ? d : (d as { exceptions?: unknown }).exceptions))).catch(() => {});
+    fetch(`${API_URL}/health`).then((r) => r.json()).then((d) => setBackendStatus(`✅ Backend connected: ${d.status}`)).catch(() => setBackendStatus("❌ Backend NOT connected"));
+    fetch(`${API_URL}/api/overview`).then((r) => r.json()).then((d) => { if (d && typeof d === "object") { setOverview(d); setOverviewSource("Live from backend ✅"); } }).catch(() => {});
+    fetch(`${API_URL}/api/transactions`).then((r) => r.json()).then((d) => setTxns(asArray<Txn>(d))).catch(() => {});
+    fetch(`${API_URL}/api/settlements`).then((r) => r.json()).then((d) => setSettlements(asArray<Settlement>(d))).catch(() => {});
+    fetch(`${API_URL}/api/exceptions`).then((r) => r.json()).then((d) => setExceptions(asArray<Exc>(Array.isArray(d) ? d : (d as { exceptions?: unknown }).exceptions))).catch(() => {});
   }, []);
 
   const runReconciliation = async () => {
     setReconLoading(true); setReconError("");
     try {
-      const res = await fetch("http://localhost:8000/api/reconcile", { method: "POST" });
+      const res = await fetch(`${API_URL}/api/reconcile`, { method: "POST" });
       if (!res.ok) throw new Error("fail");
       const data = await res.json();
       setRecon(data); setExceptions(asArray<Exc>(data.exceptions)); setWizardStep(3);
       setAudit((a) => [{ time: "Just now", action: `Run ${data.run_id} completed — ${data.total} checked`, by: "System" }, ...a]);
-    } catch { setReconError("Could not run reconciliation. Is backend on 8000?"); }
+    } catch { setReconError("Could not run reconciliation. Is backend on?"); }
     setReconLoading(false);
   };
 
   const resolveSelected = async () => {
     if (!selectedExc) return;
     try {
-      await fetch(`http://localhost:8000/api/exceptions/${selectedExc.id}/resolve`, {
+      await fetch(`${API_URL}/api/exceptions/${selectedExc.id}/resolve`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reason, note, assignee }),
       });
