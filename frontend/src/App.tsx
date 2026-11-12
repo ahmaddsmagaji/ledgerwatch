@@ -246,59 +246,21 @@ export default function App() {
         <main className="content">
           {page === "overview" && (
             <>
-              {/* === REFACTORED OVERVIEW - CLEAN === */}
-              <div className="overview-header">
-                <div>
-                  <h2 className="overview-title">Overview</h2>
-                  <p className="overview-subtitle">Payments, settlements and bank deposits — reconciled. {overviewSource} · {openExceptions.length} open · {resolvedList.length} resolved in this session</p>
-                </div>
-                <div className="overview-header-right">
-                  <label className="period-label">Period
-                    <select value={reportPeriod} onChange={(e) => setReportPeriod(e.target.value)}>
-                      <option>This week</option><option>This month</option><option>Last month</option><option>All time</option>
-                    </select>
-                  </label>
-                  <span className="freshness-pill">{overviewSource} • Updated just now</span>
-                </div>
-              </div>
-
-              {/* 4 ESSENTIAL METRICS ONLY - Rate is primary */}
-              <section className="kpi-grid">
-                <div className="card kpi-card kpi-primary">
-                  <span>RECONCILIATION RATE</span>
-                  <strong>{overview.reconciliation_rate}%</strong>
-                  <div className="kpi-progress"><span style={{ width: `${Math.min(100, Math.max(0, overview.reconciliation_rate))}%` }} /></div>
-                  <small>Matched vs flagged • {reportPeriod}</small>
-                </div>
-                <div className="card kpi-card"><span>TRANSACTION VALUE</span><strong>{fmt(overview.total_value)}</strong><small>{overview.transactions.toLocaleString()} transactions</small></div>
-                <div className="card kpi-card"><span>SETTLEMENTS RECEIVED</span><strong>{fmt(overview.settlements_received)}</strong><small>Net after fees</small></div>
-                <div className="card kpi-card"><span>OPEN EXCEPTIONS</span><strong>{openExceptions.length}</strong><small>Needs investigation</small></div>
+              <p className="hero-sub">Ledgerwatch helps businesses know whether the money they collected is the money they actually received.</p>
+              <p className="source-line">{overviewSource} · {openExceptions.length} open · {resolvedList.length} resolved in this session</p>
+              <section className="hero"><p>Flagged across {overview.flagged_count} exceptions</p><h2>{fmt(overview.flagged_total)}</h2><p>{resolvedList.length} resolved this session. {fmt(overview.flagged_total)} still unresolved.</p>
+                <div className="bar"><span style={{ width: "44.7%", background: "#B42318" }} /><span style={{ width: "20.1%", background: "#F04438" }} /><span style={{ width: "19%", background: "#7A5AF8" }} /><span style={{ width: "16.1%", background: "#F79009" }} /></div>
               </section>
-
-              <div className="overview-two-col">
-                {/* NEEDS ATTENTION - compact, max 3 */}
-                <section className="panel">
-                  <div className="panel-head"><h3>Needs attention</h3><span className="count-badge">{openExceptions.length} open</span></div>
-                  {openExceptions.length === 0 && <p className="empty">All clear — no open exceptions.</p>}
-                  {openExceptions.slice(0, 3).map((e) => (
-                    <div className="row" key={e.id}>
-                      <div><strong>{e.type}</strong> · {e.id}<br /><small>{e.txn} · {e.reference}</small></div>
-                      <div style={{ textAlign: "right" }}><strong>{fmt(e.amount)}</strong><br /><button className="link-btn" onClick={() => { setSelectedExc(e); setPage("exceptions"); }}>View →</button></div>
-                    </div>
-                  ))}
-                  <button className="link-btn" onClick={() => setPage("exceptions")}>View all open exceptions →</button>
-                </section>
-
-                {/* RECENT ACTIVITY - only 3 */}
-                <section className="panel">
-                  <div className="panel-head"><h3>Recent activity</h3></div>
-                  {audit.slice(0, 3).map((a, i) => (
-                    <div className="audit-row" key={i}><small>{a.time} · {a.by}</small><span>{a.action}</span></div>
-                  ))}
-                  <button className="link-btn" onClick={() => setPage("reports")}>View all activity →</button>
-                </section>
-              </div>
-              {/* === END REFACTORED OVERVIEW === */}
+              <section className="cards">
+                <div className="card"><span>TRANSACTIONS</span><strong>{overview.transactions.toLocaleString()}</strong><small>Sample aggregate</small></div>
+                <div className="card"><span>TOTAL VALUE</span><strong>{fmt(overview.total_value)}</strong><small>{fmt(overview.settlements_received)} settlements received</small></div>
+                <div className="card"><span>OPEN EXCEPTIONS</span><strong>{openExceptions.length}</strong><small>Needs investigation</small></div>
+                <div className="card"><span>RECONCILIATION RATE</span><strong>{overview.reconciliation_rate}%</strong><small>Matched vs flagged</small></div>
+              </section>
+              <section className="panel"><h3>Exceptions Breakdown</h3>
+                {asArray<BreakdownItem>(overview.breakdown).map((b) => (<div className="row" key={b.label}><div><strong>{b.label}</strong> <span>· {b.count} · {b.pct}</span></div><strong>{fmt(b.amount)}</strong></div>))}
+                <p className="note">Possible discrepancy — needs investigation. Ledgerwatch does not move money.</p>
+              </section>
             </>
           )}
 
