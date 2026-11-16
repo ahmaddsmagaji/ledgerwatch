@@ -3,6 +3,12 @@ import "./App.css";
 
 const API_URL = "https://ledgerwatch-backend-v2.onrender.com";
 
+// ---------- PURPLE BRANDING - NO GREEN ANYMORE ----------
+const PURPLE = "#5B0DBA";
+const PURPLE2 = "#7C3AED";
+const PURPLE_DARK = "#2E1065";
+const LOGO = "/brand/logo.png";
+
 // ---------- SAFE NUMBERS - THIS FIXES THE WHITE SCREEN ----------
 const n = (v: any) => Number(v ?? 0);
 const fmt = (v: any) => "₦" + n(v).toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -48,6 +54,24 @@ function getUsers(): Record<string, User & { password: string }> {
 }
 function getSession(): User | null {
   try { return JSON.parse(localStorage.getItem("lw_session") || "null"); } catch { return null; }
+}
+
+// ---------- GOOGLE G ICON - REAL COLOURFUL G ----------[STRIPPED 51 bytes]"18" height="18" viewBox="0 0 48 48" style={{ flexShrink: 0 }}>
+      <path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.5 6.1 29.5 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.6-.4-3.9z" />
+      <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 18.9 12 24 12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.5 6.1 29.5 4 24 4 16.3 4 9.7 8.3 6.3 14.7z" />
+      <path fill="#4CAF50" d="M24 44c5.4 0 10.3-2.1 13.9-5.5l-6.4-5.4C29.4 34.6 26.8 35.5 24 35.5c-5.1 0-9.5-3.2-11.1-7.7l-6.5 5C9.6 39.6 16.2 44 24 44z" />
+      <path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.4-2.3 4.4-4.4 5.8l6.4 5.4C41.2 35.8 44 30.3 44 24c0-1.3-.1-2.6-.4-3.9z" />
+    </svg>
+  );
+}
+
+// ---------- YOUR LOGO ----------
+function LogoImg({ size = 40, radius = 10 }: { size?: number; radius?: number }) {
+  return (
+    <div style={{ width: size, height: size, borderRadius: radius, overflow: "hidden", background: "#000", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <img src={LOGO} alt="Ledgerwatch logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+    </div>
+  );
 }
 
 function mapSummary(s: any): OverviewData {
@@ -96,6 +120,13 @@ export default function App() {
   const [user, setUser] = useState<User | null>(() => getSession());
   const [form, setForm] = useState({ name: "", email: "", phone: "", business: "", password: "" });
   const [authError, setAuthError] = useState("");
+  const [showForgot, setShowForgot] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotMsg, setForgotMsg] = useState("");
+  const [showAccountMenu, setShowAccountMenu] = useState(false);
+  const [currentPw, setCurrentPw] = useState("");
+  const [newPw, setNewPw] = useState("");
+  const [pwMsg, setPwMsg] = useState("");
 
   const [backendStatus, setBackendStatus] = useState("Checking backend...");
   const [page, setPage] = useState("overview");
@@ -143,7 +174,7 @@ export default function App() {
     fetch(`${API_URL}/api/exceptions?limit=200`).then((r) => r.json()).then((d) => setExceptions(mapExceptions(d))).catch(() => {});
   }, [view]);
 
-  const openAuth = (mode: "login" | "signup") => { setAuthMode(mode); setAuthError(""); setView("auth"); };
+  const openAuth = (mode: "login" | "signup") => { setAuthMode(mode); setAuthError(""); setShowForgot(false); setView("auth"); };
 
   const handleAuth = (e: React.FormEvent) => {
     e.preventDefault();
@@ -171,7 +202,28 @@ export default function App() {
     }
   };
 
-  const logout = () => { localStorage.removeItem("lw_session"); setUser(null); setView("landing"); };
+  const handleForgot = (e: React.FormEvent) => {
+    e.preventDefault();
+    const email = forgotEmail.trim().toLowerCase();
+    const users = getUsers();
+    if (!users[email]) { setForgotMsg("No account with that email. Create an account first."); return; }
+    users[email] = { ...users[email], password: "123456" };
+    localStorage.setItem("lw_users", JSON.stringify(users));
+    setForgotMsg("✅ Password reset to 123456. Log in with 123456, then change it in Settings → Change Password.");
+  };
+
+  const handleChangePassword = () => {
+    if (!user) return;
+    const users = getUsers(); const found = users[user.email.toLowerCase()];
+    if (!found || found.password !== currentPw) { setPwMsg("❌ Current password is wrong."); return; }
+    if (newPw.length < 6) { setPwMsg("❌ New password must be at least 6 characters."); return; }
+    users[user.email.toLowerCase()] = { ...found, password: newPw };
+    localStorage.setItem("lw_users", JSON.stringify(users));
+    setPwMsg("✅ Password changed. Use the new password next time you log in."); setCurrentPw(""); setNewPw("");
+  };
+
+  const logout = () => { localStorage.removeItem("lw_session"); setUser(null); setShowAccountMenu(false); setView("landing"); };
+  const goSettings = () => { setShowAccountMenu(false); setPage("settings"); setSidebarOpen(false); };
 
   const runReconciliation = async () => {
     setReconLoading(true); setReconError("");
@@ -302,42 +354,67 @@ export default function App() {
   if (view === "landing") {
     return (
       <div style={{ fontFamily: "system-ui, sans-serif", color: "#0f172a", background: "#fff", minHeight: "100vh" }}>
-        <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 24px", maxWidth: 1100, margin: "0 auto" }}>
-          <div style={{ fontWeight: 800, fontSize: 22 }}><span style={{ color: "#0f766e" }}>Ledger</span>watch</div>
+        <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 24px", maxWidth: 1120, margin: "0 auto" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}><LogoImg size={44} radius={12} /><div><div style={{ fontWeight: 900, fontSize: 23, lineHeight: 1 }}>Ledgerwatch</div><div style={{ fontSize: 10, color: PURPLE, fontWeight: 800, letterSpacing: 1.2 }}>RECONCILE • PROVE • RESOLVE</div></div></div>
           <div style={{ display: "flex", gap: 10 }}>
-            <button onClick={() => openAuth("login")} style={{ padding: "10px 18px", borderRadius: 999, border: "1px solid #e2e8f0", background: "#fff", fontWeight: 600, cursor: "pointer" }}>Log in</button>
-            <button onClick={() => openAuth("signup")} style={{ padding: "10px 18px", borderRadius: 999, border: "none", background: "#0f766e", color: "#fff", fontWeight: 700, cursor: "pointer" }}>Create account</button>
+            <button onClick={() => openAuth("login")} style={{ padding: "10px 18px", borderRadius: 999, border: "1px solid #e2e8f0", background: "#fff", fontWeight: 700, cursor: "pointer" }}>Log in</button>
+            <button onClick={() => openAuth("signup")} style={{ padding: "10px 18px", borderRadius: 999, border: "none", background: PURPLE, color: "#fff", fontWeight: 800, cursor: "pointer" }}>Create account</button>
           </div>
         </header>
-        <main style={{ maxWidth: 1100, margin: "0 auto", padding: "40px 24px 80px" }}>
-          <div style={{ display: "inline-block", background: "#f0fdfa", color: "#0f766e", padding: "6px 12px", borderRadius: 999, fontSize: 13, fontWeight: 700 }}>PAYMENT SETTLEMENT RECONCILIATION</div>
-          <h1 style={{ fontSize: 52, lineHeight: 1.05, letterSpacing: -1.5, margin: "20px 0 16px", maxWidth: 750 }}>Know what you earned. Find what hasn&apos;t arrived.</h1>
-          <p style={{ fontSize: 19, color: "#475569", maxWidth: 680, lineHeight: 1.6 }}>Ledgerwatch checks your orders against your Monnify settlements and your bank deposits. If something is missing, short, or charged wrong, we show you exactly what — and track it until it&apos;s resolved.</p>
-          <div style={{ display: "flex", gap: 12, marginTop: 28, flexWrap: "wrap" }}>
-            <button onClick={() => openAuth("signup")} style={{ padding: "14px 24px", borderRadius: 12, border: "none", background: "#0f766e", color: "#fff", fontWeight: 700, fontSize: 16, cursor: "pointer" }}>Book a Demo →</button>
-            <button onClick={() => openAuth("login")} style={{ padding: "14px 24px", borderRadius: 12, border: "1px solid #e2e8f0", background: "#fff", fontWeight: 600, fontSize: 16, cursor: "pointer" }}>See How It Works</button>
-          </div>
-          <p style={{ fontSize: 13, color: "#94a3b8", marginTop: 12 }}>No card required. Your workspace is separate — your data is only yours.</p>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginTop: 32, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 16, padding: 20 }}>
-            <div><div style={{ color: "#64748b", fontSize: 12 }}>EXAMPLE — EXPECTED SETTLEMENT</div><div style={{ fontWeight: 800, fontSize: 20 }}>₦98,500</div></div>
-            <div><div style={{ color: "#64748b", fontSize: 12 }}>BANK DEPOSIT</div><div style={{ fontWeight: 800, fontSize: 20 }}>₦96,500</div></div>
-            <div><div style={{ color: "#64748b", fontSize: 12 }}>DIFFERENCE</div><div style={{ fontWeight: 800, fontSize: 20, color: "#dc2626" }}>₦2,000</div></div>
-            <div><div style={{ color: "#64748b", fontSize: 12 }}>STATUS</div><div style={{ fontWeight: 800, fontSize: 16 }}>Needs investigation</div></div>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16, marginTop: 32 }}>
-            {[
-              { t: "1. Connect your records", d: "Add your orders, Monnify settlements, and bank credits. Paste, upload, or enter manually — no CSV required to start." },
-              { t: "2. We match everything", d: "We match each order to its settlement and to the bank credit. Exact matches, fee differences, and timing differences are all checked." },
-              { t: "3. You fix only the breaks", d: "Only the exceptions are shown — missing settlement, amount mismatch, fee discrepancy, duplicate, orphan bank credit. Resolve them one by one, with a full audit trail." },
-            ].map((c) => (
-              <div key={c.t} style={{ border: "1px solid #e2e8f0", borderRadius: 16, padding: 22 }}>
-                <div style={{ fontWeight: 800, fontSize: 17, marginBottom: 8 }}>{c.t}</div>
-                <div style={{ color: "#475569", lineHeight: 1.6, fontSize: 15 }}>{c.d}</div>
+        <section style={{ background: `linear-gradient(135deg, ${PURPLE_DARK} 0%, ${PURPLE} 55%, ${PURPLE2} 100%)`, color: "#fff" }}>
+          <div style={{ maxWidth: 1120, margin: "0 auto", padding: "52px 24px 56px", display: "grid", gridTemplateColumns: "1.15fr 0.85fr", gap: 32, alignItems: "center" }}>
+            <div>
+              <div style={{ display: "inline-block", background: "rgba(255,255,255,0.16)", border: "1px solid rgba(255,255,255,0.25)", padding: "6px 12px", borderRadius: 999, fontSize: 12, fontWeight: 800, letterSpacing: 1 }}>PAYMENT SETTLEMENT RECONCILIATION • FOR NIGERIAN BUSINESSES</div>
+              <h1 style={{ fontSize: 54, lineHeight: 1.02, letterSpacing: -1.5, margin: "18px 0 14px" }}>Know what you earned.<br />Find what hasn&apos;t arrived.</h1>
+              <p style={{ fontSize: 18, color: "#e9d5ff", lineHeight: 1.65, maxWidth: 560 }}>Did the money you sold actually enter your bank? Ledgerwatch checks <b style={{ color: "#fff" }}>every order</b> against <b style={{ color: "#fff" }}>Monnify settlements</b> and <b style={{ color: "#fff" }}>bank deposits</b> — and shows you exactly what is missing, short, or charged wrong.</p>
+              <div style={{ display: "flex", gap: 12, marginTop: 26, flexWrap: "wrap" }}>
+                <button onClick={() => openAuth("signup")} style={{ padding: "14px 24px", borderRadius: 12, border: "none", background: "#fff", color: PURPLE_DARK, fontWeight: 900, fontSize: 16, cursor: "pointer" }}>Book a Demo →</button>
+                <button onClick={() => openAuth("login")} style={{ padding: "14px 24px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.4)", background: "transparent", color: "#fff", fontWeight: 700, fontSize: 16, cursor: "pointer" }}>See How It Works</button>
               </div>
-            ))}
+              <p style={{ fontSize: 13, color: "#d8b4fe", marginTop: 12 }}>✓ No card required &nbsp;•&nbsp; ✓ Your workspace is separate &nbsp;•&nbsp; ✓ We never move your money</p>
+            </div>
+            <div style={{ background: "#fff", color: "#0f172a", borderRadius: 20, padding: 24, boxShadow: "0 24px 60px rgba(0,0,0,0.3)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><b>LIVE EXAMPLE</b><span style={{ background: "#fef3c7", color: "#92400e", padding: "4px 10px", borderRadius: 999, fontSize: 12, fontWeight: 800 }}>Needs investigation</span></div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 18 }}>
+                <div style={{ background: "#f8fafc", borderRadius: 12, padding: 14 }}><div style={{ fontSize: 11, color: "#64748b", fontWeight: 700 }}>EXPECTED SETTLEMENT</div><div style={{ fontSize: 22, fontWeight: 900 }}>₦98,500</div><div style={{ fontSize: 12, color: "#64748b" }}>What Monnify should send</div></div>
+                <div style={{ background: "#f8fafc", borderRadius: 12, padding: 14 }}><div style={{ fontSize: 11, color: "#64748b", fontWeight: 700 }}>BANK DEPOSIT</div><div style={{ fontSize: 22, fontWeight: 900 }}>₦96,500</div><div style={{ fontSize: 12, color: "#64748b" }}>What actually hit bank</div></div>
+              </div>
+              <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 12, padding: 14, marginTop: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}><div><div style={{ fontSize: 11, color: "#991b1b", fontWeight: 800 }}>DIFFERENCE — WHERE IS IT?</div><div style={{ fontSize: 12, color: "#7f1d1d" }}>Fee? Short payment? Timing?</div></div><div style={{ fontSize: 22, fontWeight: 900, color: "#dc2626" }}>₦2,000</div></div>
+              <button onClick={() => openAuth("signup")} style={{ width: "100%", marginTop: 14, padding: 12, borderRadius: 10, border: "none", background: PURPLE, color: "#fff", fontWeight: 800, cursor: "pointer" }}>Find my missing ₦2,000 →</button>
+              <p style={{ fontSize: 11, color: "#94a3b8", textAlign: "center", marginTop: 8 }}>Example to show how it works — not your real data.</p>
+            </div>
           </div>
-        </main>
-        <footer style={{ borderTop: "1px solid #e2e8f0", padding: "20px 24px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>Ledgerwatch — Reconcile payments, settlements and bank deposits.</footer>
+        </section>
+        <section style={{ maxWidth: 1120, margin: "0 auto", padding: "48px 24px 0" }}>
+          <h2 style={{ fontSize: 28, margin: "0 0 8px" }}>What is Ledgerwatch?</h2>
+          <p style={{ color: "#475569", fontSize: 17, lineHeight: 1.7, maxWidth: 760 }}>You sell. Monnify collects. Your bank should receive. But sometimes the numbers don&apos;t match — a settlement is missing, a fee is wrong, a POS sale never lands. Ledgerwatch is the <b>truth-checker</b> between those 3 numbers. It doesn&apos;t move money. It <b>proves where your money went.</b></p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 16, marginTop: 24 }}>
+            {[
+              { e: "📦", t: "Orders", d: "What your system says you sold — every order, reference, customer, amount." },
+              { e: "💳", t: "Settlements", d: "What Monnify / Paystack / Flutterwave says they sent — Gross − Fee = Net." },
+              { e: "🏦", t: "Bank Deposits", d: "What actually hit your bank — the only number that pays your bills." },
+              { e: "⚠️", t: "Exceptions", d: "Only the breaks. Missing, mismatch, duplicate, fee error, orphan credit, timing break." },
+            ].map((c) => (<div key={c.t} style={{ border: "1px solid #e2e8f0", borderRadius: 16, padding: 20 }}><div style={{ fontSize: 28 }}>{c.e}</div><div style={{ fontWeight: 800, margin: "8px 0 6px" }}>{c.t}</div><div style={{ color: "#475569", fontSize: 14, lineHeight: 1.6 }}>{c.d}</div></div>))}
+          </div>
+        </section>
+        <section style={{ maxWidth: 1120, margin: "0 auto", padding: "48px 24px 0" }}>
+          <h2 style={{ fontSize: 28, margin: "0 0 8px" }}>How to use it — 3 steps, 5 minutes</h2>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16, marginTop: 16 }}>
+            {[
+              { n: "1", t: "Create your workspace", d: "Sign up with email + phone. Your business gets its own workspace — your data is only yours. No other business can see it." },
+              { n: "2", t: "Add your 3 records", d: "Add Orders, Settlements, Bank credits. Paste, upload CSV, or enter manually. No CSV required to start. We match by reference, then check Gross − Fee = Net." },
+              { n: "3", t: "Fix only the breaks", d: "Open Exceptions. Click one. See the evidence. Assign it, add a note, resolve it with a reason. Audit trail proves what you did. Export to Sheets for your accountant." },
+            ].map((c) => (<div key={c.n} style={{ background: "#faf5ff", border: "1px solid #e9d5ff", borderRadius: 16, padding: 22 }}><div style={{ width: 36, height: 36, borderRadius: 999, background: PURPLE, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900 }}>{c.n}</div><div style={{ fontWeight: 800, fontSize: 17, margin: "12px 0 6px" }}>{c.t}</div><div style={{ color: "#475569", fontSize: 14, lineHeight: 1.6 }}>{c.d}</div></div>))}
+          </div>
+        </section>
+        <section style={{ maxWidth: 1120, margin: "0 auto", padding: "48px 24px 60px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <div style={{ border: `2px solid ${PURPLE}`, borderRadius: 16, padding: 22 }}><h3 style={{ margin: "0 0 10px" }}>✅ Who it&apos;s for</h3><ul style={{ color: "#475569", lineHeight: 1.8, margin: 0, paddingLeft: 18 }}><li>E-commerce stores using Monnify + POS</li><li>Shops with many daily sales to reconcile</li><li>Businesses tired of manual Excel reconciliation</li><li>Owners who want proof for their accountant</li></ul></div>
+            <div style={{ border: "1px solid #e2e8f0", borderRadius: 16, padding: 22 }}><h3 style={{ margin: "0 0 10px" }}>❌ What it&apos;s NOT</h3><ul style={{ color: "#475569", lineHeight: 1.8, margin: 0, paddingLeft: 18 }}><li>Not a payment gateway — we don&apos;t collect money</li><li>Not a bank — we never ask for bank login</li><li>Not an accounting clone — we do one thing: reconciliation</li><li>We never call a mismatch &quot;fraud&quot; — only &quot;needs investigation&quot;</li></ul></div>
+          </div>
+          <div style={{ background: PURPLE_DARK, color: "#fff", borderRadius: 20, padding: 28, marginTop: 24, textAlign: "center" }}><h2 style={{ margin: "0 0 8px" }}>Stop guessing where your money went.</h2><p style={{ color: "#d8b4fe", margin: "0 0 18px" }}>Create your workspace and see your first reconciliation in minutes.</p><button onClick={() => openAuth("signup")} style={{ padding: "14px 28px", borderRadius: 12, border: "none", background: "#fff", color: PURPLE_DARK, fontWeight: 900, cursor: "pointer" }}>Create free account →</button></div>
+        </section>
+        <footer style={{ borderTop: "1px solid #e2e8f0", padding: "20px 24px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>Ledgerwatch — Reconcile payments, settlements and bank deposits. We never move your money.</footer>
       </div>
     );
   }
@@ -346,31 +423,41 @@ export default function App() {
     return (
       <div style={{ fontFamily: "system-ui, sans-serif", minHeight: "100vh", background: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
         <div style={{ background: "#fff", borderRadius: 20, padding: 32, width: "100%", maxWidth: 440, boxShadow: "0 10px 40px rgba(0,0,0,0.08)" }}>
-          <div style={{ fontWeight: 800, fontSize: 22, marginBottom: 4 }}><span style={{ color: "#0f766e" }}>Ledger</span>watch</div>
-          <h2 style={{ margin: "0 0 6px", fontSize: 26 }}>{authMode === "signup" ? "Create your account" : "Welcome back"}</h2>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}><LogoImg size={36} /><span style={{ fontWeight: 900, fontSize: 22 }}>Ledgerwatch</span></div>
+          <h2 style={{ margin: "12px 0 6px", fontSize: 26 }}>{authMode === "signup" ? "Create your account" : "Welcome back"}</h2>
           <p style={{ color: "#64748b", margin: "0 0 20px", fontSize: 14 }}>{authMode === "signup" ? "Your own workspace. Your data stays yours." : "Log in to your workspace."}</p>
           <div style={{ display: "flex", background: "#f1f5f9", borderRadius: 999, padding: 4, marginBottom: 20 }}>
             {(["signup", "login"] as const).map((m) => (
-              <button key={m} onClick={() => { setAuthMode(m); setAuthError(""); }} style={{ flex: 1, padding: "10px", borderRadius: 999, border: "none", background: authMode === m ? "#fff" : "transparent", fontWeight: 700, cursor: "pointer" }}>{m === "signup" ? "Sign up" : "Log in"}</button>
+              <button key={m} onClick={() => { setAuthMode(m); setAuthError(""); setShowForgot(false); }} style={{ flex: 1, padding: "10px", borderRadius: 999, border: "none", background: authMode === m ? "#fff" : "transparent", fontWeight: 700, cursor: "pointer" }}>{m === "signup" ? "Sign up" : "Log in"}</button>
             ))}
           </div>
-          <button onClick={() => setAuthError("Google login is coming next — for now, create an account with email + password below.")} style={{ width: "100%", padding: 12, borderRadius: 10, border: "1px solid #e2e8f0", background: "#fff", fontWeight: 700, cursor: "pointer", marginBottom: 16 }}>Continue with Google</button>
+          <button onClick={() => setAuthError("Google login is coming next — for now, create an account with email + password below.")} style={{ width: "100%", padding: 12, borderRadius: 10, border: "1px solid #e2e8f0", background: "#fff", fontWeight: 700, cursor: "pointer", marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}><GoogleIcon /> Continue with Google</button>
           <div style={{ textAlign: "center", color: "#94a3b8", fontSize: 12, marginBottom: 16 }}>or with email</div>
-          <form onSubmit={handleAuth} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {authMode === "signup" && (
-              <>
-                <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Full name — e.g. Ahmad Magaji" style={{ padding: 12, borderRadius: 10, border: "1px solid #e2e8f0" }} />
-                <input value={form.business} onChange={(e) => setForm({ ...form, business: e.target.value })} placeholder="Business name — e.g. Magaji Stores" style={{ padding: 12, borderRadius: 10, border: "1px solid #e2e8f0" }} />
-                <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="Phone — e.g. 0803 123 4567" style={{ padding: 12, borderRadius: 10, border: "1px solid #e2e8f0" }} />
-              </>
-            )}
-            <input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="Email — e.g. ahmad@ledgerwatch.com.ng" style={{ padding: 12, borderRadius: 10, border: "1px solid #e2e8f0" }} />
-            <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Password (at least 6 characters)" style={{ padding: 12, borderRadius: 10, border: "1px solid #e2e8f0" }} />
-            {authError && <div style={{ color: "#dc2626", fontSize: 13 }}>{authError}</div>}
-            <button type="submit" style={{ padding: 13, borderRadius: 10, border: "none", background: "#0f766e", color: "#fff", fontWeight: 800, cursor: "pointer" }}>{authMode === "signup" ? "Create account →" : "Log in →"}</button>
-          </form>
+          {!showForgot ? (
+            <form onSubmit={handleAuth} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {authMode === "signup" && (
+                <>
+                  <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Full name — e.g. Ahmad Magaji" style={{ padding: 12, borderRadius: 10, border: "1px solid #e2e8f0" }} />
+                  <input value={form.business} onChange={(e) => setForm({ ...form, business: e.target.value })} placeholder="Business name — e.g. Magaji Stores" style={{ padding: 12, borderRadius: 10, border: "1px solid #e2e8f0" }} />
+                  <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="Phone — e.g. 0803 123 4567" style={{ padding: 12, borderRadius: 10, border: "1px solid #e2e8f0" }} />
+                </>
+              )}
+              <input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="Email — e.g. ahmad@ledgerwatch.com.ng" style={{ padding: 12, borderRadius: 10, border: "1px solid #e2e8f0" }} />
+              <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Password (at least 6 characters)" style={{ padding: 12, borderRadius: 10, border: "1px solid #e2e8f0" }} />
+              {authMode === "login" && <button type="button" onClick={() => { setShowForgot(true); setForgotMsg(""); }} style={{ background: "none", border: "none", color: PURPLE, fontWeight: 700, cursor: "pointer", textAlign: "right", fontSize: 13 }}>Forgot password?</button>}
+              {authError && <div style={{ color: "#dc2626", fontSize: 13 }}>{authError}</div>}
+              <button type="submit" style={{ padding: 13, borderRadius: 10, border: "none", background: PURPLE, color: "#fff", fontWeight: 800, cursor: "pointer" }}>{authMode === "signup" ? "Create account →" : "Log in →"}</button>
+            </form>
+          ) : (
+            <form onSubmit={handleForgot} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <p style={{ margin: 0, color: "#475569", fontSize: 14 }}>Enter your email. We&apos;ll reset your password.</p>
+              <input value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} placeholder="Email you signed up with" style={{ padding: 12, borderRadius: 10, border: "1px solid #e2e8f0" }} />
+              {forgotMsg && <div style={{ color: forgotMsg.startsWith("✅") ? "#15803d" : "#dc2626", fontSize: 13 }}>{forgotMsg}</div>}
+              <button type="submit" style={{ padding: 13, borderRadius: 10, border: "none", background: PURPLE, color: "#fff", fontWeight: 800, cursor: "pointer" }}>Reset password →</button>
+              <button type="button" onClick={() => setShowForgot(false)} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer" }}>← Back to log in</button>
+            </form>
+          )}
           <button onClick={() => setView("landing")} style={{ marginTop: 16, width: "100%", background: "none", border: "none", color: "#64748b", cursor: "pointer" }}>← Back to home</button>
-          <p style={{ fontSize: 11, color: "#94a3b8", marginTop: 12, textAlign: "center" }}>Demo auth: saved on this device for now. Real Google login + server auth is next after landing is fixed.</p>
         </div>
       </div>
     );
@@ -380,28 +467,38 @@ export default function App() {
     <div className="layout">
       <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
         <div className="sidebar-brand">
-          <div className="logo-wrap">
-            <img src="/brand/logo.png" alt="Ledgerwatch" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-            <span className="logo-fallback">L</span>
-          </div>
+          <LogoImg size={38} />
           <div><strong>Ledgerwatch</strong><small>{workspaceName}</small></div>
           <button className="close-btn" onClick={() => setSidebarOpen(false)}>✕</button>
         </div>
         <p className="menu-title">MENU</p>
         <nav>{menu.map((m) => (
-          <button key={m.id} className={`nav-item ${page === m.id ? "active" : ""}`} onClick={() => { setPage(m.id); setSidebarOpen(false); setSearch(""); setStatusFilter("All"); setChannelFilter("All"); }}>
+          <button key={m.id} className={`nav-item ${page === m.id ? "active" : ""}`} onClick={() => { setPage(m.id); setSidebarOpen(false); setSearch(""); setStatusFilter("All"); setChannelFilter("All"); setShowAccountMenu(false); }}>
             <span className="nav-icon">{m.icon}</span> {m.label}{m.id === "exceptions" && <span className="badge">{openExceptions.length}</span>}
           </button>))}</nav>
-        <div className="sidebar-footer"><p>Sync. Reconcile. Resolve.</p><small>Ledgerwatch does not move money.</small><br /><button onClick={logout} style={{ marginTop: 8, background: "none", border: "1px solid #e2e8f0", borderRadius: 999, padding: "6px 12px", cursor: "pointer" }}>Log out</button></div>
+        <div className="sidebar-footer"><p>Sync. Reconcile. Resolve.</p><small>Ledgerwatch does not move money.</small></div>
       </aside>
       {sidebarOpen && <div className="overlay" onClick={() => setSidebarOpen(false)} />}
 
       <div className="main">
-        <header className="topbar">
+        <header className="topbar" style={{ position: "relative" }}>
           <button className="hamburger" onClick={() => setSidebarOpen(true)}>☰</button><h2>{activeLabel}</h2>
           <input className="search" placeholder="Search TXN, EXC, reference..." value={search} onChange={(e) => setSearch(e.target.value)} />
           <span className={backendStatus.includes("✅") ? "backend-pill ok" : "backend-pill bad"}>{backendStatus}</span>
-          <div className="user"><span className="avatar">{(user?.name || "A").slice(0, 1)}</span><div><strong>{user?.name || "Ahmad Magaji"}</strong><small>{user?.business || "Admin"}</small></div></div>
+          <div style={{ position: "relative" }}>
+            <button onClick={() => setShowAccountMenu((v) => !v)} style={{ display: "flex", alignItems: "center", gap: 8, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 999, padding: "6px 12px 6px 6px", cursor: "pointer" }}>
+              <span className="avatar" style={{ background: PURPLE }}>{(user?.name || "A").slice(0, 1)}</span>
+              <span style={{ textAlign: "left", lineHeight: 1.2 }}><strong style={{ fontSize: 13 }}>{user?.name || "Ahmad Magaji"}</strong><br /><small style={{ color: "#64748b" }}>Tap for account ▾</small></span>
+            </button>
+            {showAccountMenu && (
+              <div style={{ position: "absolute", right: 0, top: 52, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, boxShadow: "0 12px 32px rgba(0,0,0,0.14)", width: 230, zIndex: 50, overflow: "hidden" }}>
+                <div style={{ padding: "12px 14px", borderBottom: "1px solid #f1f5f9" }}><strong>{user?.name}</strong><br /><small style={{ color: "#64748b" }}>{user?.email}<br />{user?.business}</small></div>
+                <button onClick={goSettings} style={{ width: "100%", textAlign: "left", padding: "12px 14px", background: "none", border: "none", cursor: "pointer", fontSize: 14 }}>⚙ Settings</button>
+                <button onClick={goSettings} style={{ width: "100%", textAlign: "left", padding: "12px 14px", background: "none", border: "none", cursor: "pointer", fontSize: 14, borderTop: "1px solid #f1f5f9" }}>🔑 Change Password</button>
+                <button onClick={logout} style={{ width: "100%", textAlign: "left", padding: "12px 14px", background: "none", border: "none", cursor: "pointer", fontSize: 14, color: "#dc2626", borderTop: "1px solid #f1f5f9" }}>🚪 Log out</button>
+              </div>
+            )}
+          </div>
         </header>
 
         <main className="content">
@@ -631,7 +728,7 @@ export default function App() {
 
           {page === "settings" && (
             <>
-              <p className="hero-sub">Control how Ledgerwatch matches your money. These settings are saved in this browser for now.</p>
+              <p className="hero-sub">Control how Ledgerwatch matches your money. Tap your avatar at top-right any time to come back here, change password, or log out.</p>
               {settingsMsg && <p className="success-box">{settingsMsg}</p>}
               <div className="panel">
                 <h3>Workspace</h3>
@@ -652,10 +749,20 @@ export default function App() {
                 <p className="note">Demo: notifications are not actually sent yet. In production this uses email / WhatsApp.</p>
               </div>
               <div className="panel" style={{ marginTop: 16 }}>
+                <h3>🔑 Change Password</h3>
+                <p><strong>{user?.name || "Ahmad Magaji"}</strong><br /><small>{user?.business || "Demo Commerce Ltd"} · {user?.email || "ahmad@demo.com"}</small></p>
+                <label className="field">Current password<input type="password" value={currentPw} onChange={(e) => setCurrentPw(e.target.value)} placeholder="Your current password" /></label>
+                <label className="field">New password (at least 6 characters)<input type="password" value={newPw} onChange={(e) => setNewPw(e.target.value)} placeholder="New password" /></label>
+                {pwMsg && <p className={pwMsg.startsWith("✅") ? "success-box" : "error"}>{pwMsg}</p>}
+                <button className="primary-btn" onClick={handleChangePassword}>Change Password</button>
+                <p className="note">Forgot your password? Log out, then on Log in click <b>Forgot password?</b> — demo reset is 123456.</p>
+              </div>
+              <div className="panel" style={{ marginTop: 16 }}>
                 <h3>Your Account</h3>
                 <p><strong>{user?.name || "Ahmad Magaji"}</strong><br /><small>{user?.business || "Demo Commerce Ltd"} · {user?.email || "ahmad@demo.com"}</small></p>
                 <p className="note">Ledgerwatch never asks for your bank login. It only reads CSVs / provider reports you upload. It never moves money.</p>
                 <button className="primary-btn" onClick={saveSettings}>💾 Save Settings</button>
+                <button className="secondary-btn" onClick={logout} style={{ marginLeft: 10 }}>🚪 Log out</button>
               </div>
             </>
           )}
