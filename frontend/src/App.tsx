@@ -3,6 +3,11 @@ import "./App.css";
 
 const API_URL = "https://ledgerwatch-backend-v2.onrender.com";
 
+// ---------- SAFE NUMBERS - THIS FIXES THE WHITE SCREEN ----------
+const n = (v: any) => Number(v ?? 0);
+const fmt = (v: any) => "₦" + n(v).toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtInt = (v: any) => n(v).toLocaleString("en-NG");
+
 type BreakdownItem = { label: string; count: number; pct: string; amount: number };
 type OverviewData = { transactions: number; total_value: number; settlements_received: number; open_exceptions: number; reconciliation_rate: number; flagged_total: number; flagged_count: number; resolved_count: number; breakdown: BreakdownItem[] };
 type Txn = { id: string; reference: string; customer: string; amount: number; date: string; channel: string; status: string };
@@ -10,20 +15,13 @@ type Settlement = { id: string; provider: string; reference: string; gross: numb
 type Exc = { id: string; txn: string; reference: string; type: string; amount: number; detail: string };
 type ReconResult = { run_id: string; total: number; matched: number; exceptions_count: number; rate: number; matched_list: { txn: string; settlement: string; reference: string; amount: number; net: number }[]; exceptions: Exc[] };
 type Audit = { time: string; action: string; by: string };
+type User = { name: string; email: string; phone: string; business: string };
 
 const FALLBACK_OVERVIEW: OverviewData = {
-  transactions: 12846, total_value: 48650000, settlements_received: 46920000, open_exceptions: 37, reconciliation_rate: 96.4,
-  flagged_total: 2420712.82, flagged_count: 44, resolved_count: 0,
-  breakdown: [
-    { label: "Missing settlement", count: 12, pct: "44.7%", amount: 1081877.00 },
-    { label: "Duplicate", count: 6, pct: "20.1%", amount: 486099.45 },
-    { label: "Orphan bank credit", count: 4, pct: "19.0%", amount: 461132.00 },
-    { label: "Timing break", count: 6, pct: "16.1%", amount: 390166.37 },
-    { label: "Fee discrepancy", count: 8, pct: "0.0%", amount: 938.00 },
-    { label: "Amount mismatch", count: 8, pct: "0.0%", amount: 500.00 },
-  ],
+  transactions: 0, total_value: 0, settlements_received: 0, open_exceptions: 0, reconciliation_rate: 0,
+  flagged_total: 0, flagged_count: 0, resolved_count: 0,
+  breakdown: [],
 };
-const fmt = (n: number) => "₦" + Number(n || 0).toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const menu = [
   { id: "overview", label: "Overview", icon: "◈" }, { id: "transactions", label: "Transactions", icon: "⇄" },
   { id: "settlements", label: "Settlements", icon: "◉" }, { id: "reconciliation", label: "Reconciliation", icon: "✓" },
@@ -45,7 +43,60 @@ const INTEGRATIONS = [
   { name: "Bank Statement (CSV)", desc: "Upload any Nigerian bank statement CSV. Works today.", status: "Available ✅", color: "#5B0DBA" },
 ];
 
+function getUsers(): Record<string, User & { password: string }> {
+  try { return JSON.parse(localStorage.getItem("lw_users") || "{}"); } catch { return {}; }
+}
+function getSession(): User | null {
+  try { return JSON.parse(localStorage.getItem("lw_session") || "null"); } catch { return null; }
+}
+
+function mapSummary(s: any): OverviewData {
+  if (!s || typeof s !== "object") return FALLBACK_OVERVIEW;
+  const ordersTotal = n(s.orders_total ?? s.transactions);
+  const ordersMatched = n(s.orders_matched ?? s.matched);
+  const exceptionsTotal = n(s.exceptions_total ?? s.open_exceptions ?? s.flagged_count);
+  const atRiskKobo = n(s.unresolved_at_risk_kobo ?? s.flagged_total);
+  const atRiskNaira = atRiskKobo > 1000 ? atRiskKobo / 100 : atRiskKobo;
+  const byType = s.by_type || {};
+  const breakdown: BreakdownItem[] = Object.entries(byType).map(([label, v]: any) => ({
+    label,
+    count: n(v?.count),
+    pct: "—",
+    amount: n(v?.amount_at_risk_kobo) / 100,
+  }));
+  const rate = ordersTotal > 0 ? Math.round(((ordersMatched / ordersTotal) * 100) * 10) / 10 : 0;
+  return {
+    transactions: ordersTotal,
+    total_value: n(s.total_value ?? (s.total_value_kobo ? n(s.total_value_kobo) / 100 : 0)),
+    settlements_received: n(s.settlements_received ?? 0),
+    open_exceptions: n(s.by_status?.open ?? exceptionsTotal),
+    reconciliation_rate: n(s.reconciliation_rate ?? rate),
+    flagged_total: atRiskNaira,
+    flagged_count: exceptionsTotal,
+    resolved_count: n(s.by_status?.resolved ?? 0),
+    breakdown,
+  };
+}
+
+function mapExceptions(d: any): Exc[] {
+  const raw: any[] = Array.isArray(d) ? d : asArray<any>((d as any)?.items ?? (d as any)?.exceptions);
+  return raw.map((x: any, i: number) => ({
+    id: String(x.id ?? `EXC-${i + 1}`),
+    txn: String(x.order_ref ?? x.txn ?? x.order_id ?? ""),
+    reference: String(x.bank_ref ?? x.reference ?? x.order_ref ?? ""),
+    type: String(x.type ?? "Exception"),
+    amount: x.amount_at_risk_kobo != null ? n(x.amount_at_risk_kobo) / 100 : n(x.amount),
+    detail: String(x.summary ?? x.detail ?? ""),
+  }));
+}
+
 export default function App() {
+  const [view, setView] = useState<"landing" | "auth" | "app">(() => (getSession() ? "app" : "landing"));
+  const [authMode, setAuthMode] = useState<"login" | "signup">("signup");
+  const [user, setUser] = useState<User | null>(() => getSession());
+  const [form, setForm] = useState({ name: "", email: "", phone: "", business: "", password: "" });
+  const [authError, setAuthError] = useState("");
+
   const [backendStatus, setBackendStatus] = useState("Checking backend...");
   const [page, setPage] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -83,12 +134,44 @@ export default function App() {
   const [reportMsg, setReportMsg] = useState("");
 
   useEffect(() => {
+    if (view !== "app") return;
     fetch(`${API_URL}/health`).then((r) => r.json()).then((d) => setBackendStatus(`✅ Backend connected: ${d.status}`)).catch(() => setBackendStatus("❌ Backend NOT connected"));
-    fetch(`${API_URL}/api/overview`).then((r) => r.json()).then((d) => { if (d && typeof d === "object") { setOverview(d); setOverviewSource("Live from backend ✅"); } }).catch(() => {});
-    fetch(`${API_URL}/api/transactions`).then((r) => r.json()).then((d) => setTxns(asArray<Txn>(d))).catch(() => {});
-    fetch(`${API_URL}/api/settlements`).then((r) => r.json()).then((d) => setSettlements(asArray<Settlement>(d))).catch(() => {});
-    fetch(`${API_URL}/api/exceptions`).then((r) => r.json()).then((d) => setExceptions(asArray<Exc>(Array.isArray(d) ? d : (d as { exceptions?: unknown }).exceptions))).catch(() => {});
-  }, []);
+    fetch(`${API_URL}/api/summary`).then((r) => r.json()).then((d) => { if (d && typeof d === "object") { setOverview(mapSummary(d)); setOverviewSource("Live from backend ✅"); } }).catch(() => {});
+    fetch(`${API_URL}/api/overview`).then((r) => r.json()).then((d) => { if (d && typeof d === "object" && d.total_value != null) { setOverview((prev) => ({ ...prev, ...d, breakdown: asArray<BreakdownItem>(d.breakdown ?? prev.breakdown) })); } }).catch(() => {});
+    fetch(`${API_URL}/api/transactions`).then((r) => r.json()).then((d) => setTxns(asArray<Txn>(Array.isArray(d) ? d : (d as any)?.items))).catch(() => {});
+    fetch(`${API_URL}/api/settlements`).then((r) => r.json()).then((d) => setSettlements(asArray<Settlement>(Array.isArray(d) ? d : (d as any)?.items))).catch(() => {});
+    fetch(`${API_URL}/api/exceptions?limit=200`).then((r) => r.json()).then((d) => setExceptions(mapExceptions(d))).catch(() => {});
+  }, [view]);
+
+  const openAuth = (mode: "login" | "signup") => { setAuthMode(mode); setAuthError(""); setView("auth"); };
+
+  const handleAuth = (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError("");
+    const email = form.email.trim().toLowerCase();
+    if (!email || !form.password) { setAuthError("Enter email and password."); return; }
+    const users = getUsers();
+    if (authMode === "signup") {
+      if (!form.name.trim()) { setAuthError("Enter your full name."); return; }
+      if (!form.phone.trim()) { setAuthError("Enter your phone number."); return; }
+      if (form.password.length < 6) { setAuthError("Password must be at least 6 characters."); return; }
+      if (users[email]) { setAuthError("This email already has an account. Log in instead."); return; }
+      const nu: User & { password: string } = { name: form.name.trim(), email, phone: form.phone.trim(), business: form.business.trim() || "My Business", password: form.password };
+      users[email] = nu;
+      localStorage.setItem("lw_users", JSON.stringify(users));
+      const session: User = { name: nu.name, email, phone: nu.phone, business: nu.business };
+      localStorage.setItem("lw_session", JSON.stringify(session));
+      setUser(session); setWorkspaceName(nu.business); setView("app");
+    } else {
+      const found = users[email];
+      if (!found || found.password !== form.password) { setAuthError("Wrong email or password. If you don't have an account, create one."); return; }
+      const session: User = { name: found.name, email, phone: found.phone, business: found.business };
+      localStorage.setItem("lw_session", JSON.stringify(session));
+      setUser(session); setWorkspaceName(found.business); setView("app");
+    }
+  };
+
+  const logout = () => { localStorage.removeItem("lw_session"); setUser(null); setView("landing"); };
 
   const runReconciliation = async () => {
     setReconLoading(true); setReconError("");
@@ -96,8 +179,9 @@ export default function App() {
       const res = await fetch(`${API_URL}/api/reconcile`, { method: "POST" });
       if (!res.ok) throw new Error("fail");
       const data = await res.json();
-      setRecon(data); setExceptions(asArray<Exc>(data.exceptions)); setWizardStep(3);
-      setAudit((a) => [{ time: "Just now", action: `Run ${data.run_id} completed — ${data.total} checked`, by: "System" }, ...a]);
+      setRecon({ ...data, exceptions: mapExceptions(data.exceptions) });
+      setExceptions(mapExceptions(data.exceptions)); setWizardStep(3);
+      setAudit((a) => [{ time: "Just now", action: `Run ${data.run_id} completed — ${n(data.total)} checked`, by: "System" }, ...a]);
     } catch { setReconError("Could not run reconciliation. Is backend on?"); }
     setReconLoading(false);
   };
@@ -149,19 +233,19 @@ export default function App() {
       `Period: ${reportPeriod}`,
       `Generated: ${new Date().toLocaleString()}`,
       ``,
-      `Transactions: ${overview.transactions}`,
-      `Total Value: ${overview.total_value}`,
-      `Settlements Received: ${overview.settlements_received}`,
+      `Transactions: ${n(overview.transactions)}`,
+      `Total Value: ${n(overview.total_value)}`,
+      `Settlements Received: ${n(overview.settlements_received)}`,
       `Open Exceptions: ${openExceptions.length}`,
       `Resolved This Session: ${resolvedList.length}`,
-      `Reconciliation Rate: ${overview.reconciliation_rate}%`,
-      `Flagged Total: ${overview.flagged_total}`,
+      `Reconciliation Rate: ${n(overview.reconciliation_rate)}%`,
+      `Flagged Total: ${n(overview.flagged_total)}`,
       ``,
       `Breakdown:`,
-      ...asArray<BreakdownItem>(overview.breakdown).map((b) => `${b.label},${b.count},${b.pct},${b.amount}`),
+      ...asArray<BreakdownItem>(overview.breakdown).map((b) => `${b.label},${n(b.count)},${b.pct},${n(b.amount)}`),
       ``,
       `Exceptions:`,
-      ...asArray<Exc>(exceptions).map((e) => `${e.id},${e.type},${e.amount},${resolvedIds.has(e.id) ? "Resolved" : "Open"}`),
+      ...asArray<Exc>(exceptions).map((e) => `${e.id},${e.type},${n(e.amount)},${resolvedIds.has(e.id) ? "Resolved" : "Open"}`),
     ];
     const blob = new Blob([lines.join("\n")], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -176,7 +260,7 @@ export default function App() {
 
   const saveSettings = () => {
     setSettingsMsg(`✅ Settings saved — Workspace: ${workspaceName} · Currency: ${currency} · Amount tolerance: ₦${tolerance} · Date tolerance: ${dateTolerance} day(s)`);
-    setAudit((a) => [{ time: "Just now", action: `Settings updated — tolerance ₦${tolerance}, date ±${dateTolerance} day(s)`, by: "Ahmad Magaji" }, ...a]);
+    setAudit((a) => [{ time: "Just now", action: `Settings updated — tolerance ₦${tolerance}, date ±${dateTolerance} day(s)`, by: user?.name || "Ahmad Magaji" }, ...a]);
     setTimeout(() => setSettingsMsg(""), 5000);
   };
 
@@ -186,7 +270,7 @@ export default function App() {
   const filteredTxns = useMemo(() => {
     const q = search.toLowerCase().trim();
     return asArray<Txn>(txns).filter((t) => {
-      const mS = !q || t.id.toLowerCase().includes(q) || t.reference.toLowerCase().includes(q) || t.customer.toLowerCase().includes(q);
+      const mS = !q || String(t.id || "").toLowerCase().includes(q) || String(t.reference || "").toLowerCase().includes(q) || String(t.customer || "").toLowerCase().includes(q);
       return mS && (statusFilter === "All" || t.status === statusFilter) && (channelFilter === "All" || t.channel === channelFilter);
     });
   }, [txns, search, statusFilter, channelFilter]);
@@ -194,7 +278,7 @@ export default function App() {
   const filteredSettlements = useMemo(() => {
     const q = search.toLowerCase().trim();
     return asArray<Settlement>(settlements).filter((s) => {
-      const mS = !q || s.id.toLowerCase().includes(q) || s.reference.toLowerCase().includes(q) || s.provider.toLowerCase().includes(q);
+      const mS = !q || String(s.id || "").toLowerCase().includes(q) || String(s.reference || "").toLowerCase().includes(q) || String(s.provider || "").toLowerCase().includes(q);
       return mS && (statusFilter === "All" || s.status === statusFilter) && (channelFilter === "All" || s.provider === channelFilter);
     });
   }, [settlements, search, statusFilter, channelFilter]);
@@ -202,18 +286,95 @@ export default function App() {
   const filteredExceptions = useMemo(() => {
     const q = search.toLowerCase().trim();
     return asArray<Exc>(exceptions).filter((e) => {
-      const mS = !q || e.id.toLowerCase().includes(q) || e.txn.toLowerCase().includes(q) || e.reference.toLowerCase().includes(q) || e.type.toLowerCase().includes(q);
+      const mS = !q || String(e.id || "").toLowerCase().includes(q) || String(e.txn || "").toLowerCase().includes(q) || String(e.reference || "").toLowerCase().includes(q) || String(e.type || "").toLowerCase().includes(q);
       return mS && (excFilter === "All" || e.type === excFilter);
     });
   }, [exceptions, search, excFilter]);
 
   const settleTotals = useMemo(() => ({
-    gross: filteredSettlements.reduce((a, s) => a + (s.gross || 0), 0),
-    fee: filteredSettlements.reduce((a, s) => a + (s.fee || 0), 0),
-    net: filteredSettlements.reduce((a, s) => a + (s.net || 0), 0),
+    gross: filteredSettlements.reduce((a, s) => a + n(s.gross), 0),
+    fee: filteredSettlements.reduce((a, s) => a + n(s.fee), 0),
+    net: filteredSettlements.reduce((a, s) => a + n(s.net), 0),
   }), [filteredSettlements]);
 
   const activeLabel = menu.find((m) => m.id === page)?.label || "Overview";
+
+  if (view === "landing") {
+    return (
+      <div style={{ fontFamily: "system-ui, sans-serif", color: "#0f172a", background: "#fff", minHeight: "100vh" }}>
+        <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 24px", maxWidth: 1100, margin: "0 auto" }}>
+          <div style={{ fontWeight: 800, fontSize: 22 }}><span style={{ color: "#0f766e" }}>Ledger</span>watch</div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <button onClick={() => openAuth("login")} style={{ padding: "10px 18px", borderRadius: 999, border: "1px solid #e2e8f0", background: "#fff", fontWeight: 600, cursor: "pointer" }}>Log in</button>
+            <button onClick={() => openAuth("signup")} style={{ padding: "10px 18px", borderRadius: 999, border: "none", background: "#0f766e", color: "#fff", fontWeight: 700, cursor: "pointer" }}>Create account</button>
+          </div>
+        </header>
+        <main style={{ maxWidth: 1100, margin: "0 auto", padding: "40px 24px 80px" }}>
+          <div style={{ display: "inline-block", background: "#f0fdfa", color: "#0f766e", padding: "6px 12px", borderRadius: 999, fontSize: 13, fontWeight: 700 }}>PAYMENT SETTLEMENT RECONCILIATION</div>
+          <h1 style={{ fontSize: 52, lineHeight: 1.05, letterSpacing: -1.5, margin: "20px 0 16px", maxWidth: 750 }}>Know what you earned. Find what hasn&apos;t arrived.</h1>
+          <p style={{ fontSize: 19, color: "#475569", maxWidth: 680, lineHeight: 1.6 }}>Ledgerwatch checks your orders against your Monnify settlements and your bank deposits. If something is missing, short, or charged wrong, we show you exactly what — and track it until it&apos;s resolved.</p>
+          <div style={{ display: "flex", gap: 12, marginTop: 28, flexWrap: "wrap" }}>
+            <button onClick={() => openAuth("signup")} style={{ padding: "14px 24px", borderRadius: 12, border: "none", background: "#0f766e", color: "#fff", fontWeight: 700, fontSize: 16, cursor: "pointer" }}>Book a Demo →</button>
+            <button onClick={() => openAuth("login")} style={{ padding: "14px 24px", borderRadius: 12, border: "1px solid #e2e8f0", background: "#fff", fontWeight: 600, fontSize: 16, cursor: "pointer" }}>See How It Works</button>
+          </div>
+          <p style={{ fontSize: 13, color: "#94a3b8", marginTop: 12 }}>No card required. Your workspace is separate — your data is only yours.</p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginTop: 32, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 16, padding: 20 }}>
+            <div><div style={{ color: "#64748b", fontSize: 12 }}>EXAMPLE — EXPECTED SETTLEMENT</div><div style={{ fontWeight: 800, fontSize: 20 }}>₦98,500</div></div>
+            <div><div style={{ color: "#64748b", fontSize: 12 }}>BANK DEPOSIT</div><div style={{ fontWeight: 800, fontSize: 20 }}>₦96,500</div></div>
+            <div><div style={{ color: "#64748b", fontSize: 12 }}>DIFFERENCE</div><div style={{ fontWeight: 800, fontSize: 20, color: "#dc2626" }}>₦2,000</div></div>
+            <div><div style={{ color: "#64748b", fontSize: 12 }}>STATUS</div><div style={{ fontWeight: 800, fontSize: 16 }}>Needs investigation</div></div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16, marginTop: 32 }}>
+            {[
+              { t: "1. Connect your records", d: "Add your orders, Monnify settlements, and bank credits. Paste, upload, or enter manually — no CSV required to start." },
+              { t: "2. We match everything", d: "We match each order to its settlement and to the bank credit. Exact matches, fee differences, and timing differences are all checked." },
+              { t: "3. You fix only the breaks", d: "Only the exceptions are shown — missing settlement, amount mismatch, fee discrepancy, duplicate, orphan bank credit. Resolve them one by one, with a full audit trail." },
+            ].map((c) => (
+              <div key={c.t} style={{ border: "1px solid #e2e8f0", borderRadius: 16, padding: 22 }}>
+                <div style={{ fontWeight: 800, fontSize: 17, marginBottom: 8 }}>{c.t}</div>
+                <div style={{ color: "#475569", lineHeight: 1.6, fontSize: 15 }}>{c.d}</div>
+              </div>
+            ))}
+          </div>
+        </main>
+        <footer style={{ borderTop: "1px solid #e2e8f0", padding: "20px 24px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>Ledgerwatch — Reconcile payments, settlements and bank deposits.</footer>
+      </div>
+    );
+  }
+
+  if (view === "auth") {
+    return (
+      <div style={{ fontFamily: "system-ui, sans-serif", minHeight: "100vh", background: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+        <div style={{ background: "#fff", borderRadius: 20, padding: 32, width: "100%", maxWidth: 440, boxShadow: "0 10px 40px rgba(0,0,0,0.08)" }}>
+          <div style={{ fontWeight: 800, fontSize: 22, marginBottom: 4 }}><span style={{ color: "#0f766e" }}>Ledger</span>watch</div>
+          <h2 style={{ margin: "0 0 6px", fontSize: 26 }}>{authMode === "signup" ? "Create your account" : "Welcome back"}</h2>
+          <p style={{ color: "#64748b", margin: "0 0 20px", fontSize: 14 }}>{authMode === "signup" ? "Your own workspace. Your data stays yours." : "Log in to your workspace."}</p>
+          <div style={{ display: "flex", background: "#f1f5f9", borderRadius: 999, padding: 4, marginBottom: 20 }}>
+            {(["signup", "login"] as const).map((m) => (
+              <button key={m} onClick={() => { setAuthMode(m); setAuthError(""); }} style={{ flex: 1, padding: "10px", borderRadius: 999, border: "none", background: authMode === m ? "#fff" : "transparent", fontWeight: 700, cursor: "pointer" }}>{m === "signup" ? "Sign up" : "Log in"}</button>
+            ))}
+          </div>
+          <button onClick={() => setAuthError("Google login is coming next — for now, create an account with email + password below.")} style={{ width: "100%", padding: 12, borderRadius: 10, border: "1px solid #e2e8f0", background: "#fff", fontWeight: 700, cursor: "pointer", marginBottom: 16 }}>Continue with Google</button>
+          <div style={{ textAlign: "center", color: "#94a3b8", fontSize: 12, marginBottom: 16 }}>or with email</div>
+          <form onSubmit={handleAuth} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {authMode === "signup" && (
+              <>
+                <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Full name — e.g. Ahmad Magaji" style={{ padding: 12, borderRadius: 10, border: "1px solid #e2e8f0" }} />
+                <input value={form.business} onChange={(e) => setForm({ ...form, business: e.target.value })} placeholder="Business name — e.g. Magaji Stores" style={{ padding: 12, borderRadius: 10, border: "1px solid #e2e8f0" }} />
+                <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="Phone — e.g. 0803 123 4567" style={{ padding: 12, borderRadius: 10, border: "1px solid #e2e8f0" }} />
+              </>
+            )}
+            <input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="Email — e.g. ahmad@ledgerwatch.com.ng" style={{ padding: 12, borderRadius: 10, border: "1px solid #e2e8f0" }} />
+            <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Password (at least 6 characters)" style={{ padding: 12, borderRadius: 10, border: "1px solid #e2e8f0" }} />
+            {authError && <div style={{ color: "#dc2626", fontSize: 13 }}>{authError}</div>}
+            <button type="submit" style={{ padding: 13, borderRadius: 10, border: "none", background: "#0f766e", color: "#fff", fontWeight: 800, cursor: "pointer" }}>{authMode === "signup" ? "Create account →" : "Log in →"}</button>
+          </form>
+          <button onClick={() => setView("landing")} style={{ marginTop: 16, width: "100%", background: "none", border: "none", color: "#64748b", cursor: "pointer" }}>← Back to home</button>
+          <p style={{ fontSize: 11, color: "#94a3b8", marginTop: 12, textAlign: "center" }}>Demo auth: saved on this device for now. Real Google login + server auth is next after landing is fixed.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="layout">
@@ -231,7 +392,7 @@ export default function App() {
           <button key={m.id} className={`nav-item ${page === m.id ? "active" : ""}`} onClick={() => { setPage(m.id); setSidebarOpen(false); setSearch(""); setStatusFilter("All"); setChannelFilter("All"); }}>
             <span className="nav-icon">{m.icon}</span> {m.label}{m.id === "exceptions" && <span className="badge">{openExceptions.length}</span>}
           </button>))}</nav>
-        <div className="sidebar-footer"><p>Sync. Reconcile. Resolve.</p><small>Ledgerwatch does not move money.</small></div>
+        <div className="sidebar-footer"><p>Sync. Reconcile. Resolve.</p><small>Ledgerwatch does not move money.</small><br /><button onClick={logout} style={{ marginTop: 8, background: "none", border: "1px solid #e2e8f0", borderRadius: 999, padding: "6px 12px", cursor: "pointer" }}>Log out</button></div>
       </aside>
       {sidebarOpen && <div className="overlay" onClick={() => setSidebarOpen(false)} />}
 
@@ -240,7 +401,7 @@ export default function App() {
           <button className="hamburger" onClick={() => setSidebarOpen(true)}>☰</button><h2>{activeLabel}</h2>
           <input className="search" placeholder="Search TXN, EXC, reference..." value={search} onChange={(e) => setSearch(e.target.value)} />
           <span className={backendStatus.includes("✅") ? "backend-pill ok" : "backend-pill bad"}>{backendStatus}</span>
-          <div className="user"><span className="avatar">A</span><div><strong>Ahmad Magaji</strong><small>Admin</small></div></div>
+          <div className="user"><span className="avatar">{(user?.name || "A").slice(0, 1)}</span><div><strong>{user?.name || "Ahmad Magaji"}</strong><small>{user?.business || "Admin"}</small></div></div>
         </header>
 
         <main className="content">
@@ -249,7 +410,7 @@ export default function App() {
               <div className="overview-header">
                 <div>
                   <h2 className="overview-title">Overview</h2>
-                  <p className="overview-subtitle">Payments, settlements and bank deposits — reconciled. {overviewSource} · {openExceptions.length} open · {resolvedList.length} resolved in this session</p>
+                  <p className="overview-subtitle">Payments, settlements and bank deposits — reconciled. {overviewSource} · {fmtInt(openExceptions.length)} open · {fmtInt(resolvedList.length)} resolved in this session</p>
                 </div>
                 <div className="overview-header-right">
                   <label className="period-label">Period
@@ -264,18 +425,18 @@ export default function App() {
               <section className="kpi-grid">
                 <div className="card kpi-card kpi-primary">
                   <span>RECONCILIATION RATE</span>
-                  <strong>{overview.reconciliation_rate}%</strong>
-                  <div className="kpi-progress"><span style={{ width: `${Math.min(100, Math.max(0, overview.reconciliation_rate))}%` }} /></div>
+                  <strong>{n(overview.reconciliation_rate)}%</strong>
+                  <div className="kpi-progress"><span style={{ width: `${Math.min(100, Math.max(0, n(overview.reconciliation_rate)))}%` }} /></div>
                   <small>Matched vs flagged • {reportPeriod}</small>
                 </div>
-                <div className="card kpi-card"><span>TRANSACTION VALUE</span><strong>{fmt(overview.total_value)}</strong><small>{overview.transactions.toLocaleString()} transactions</small></div>
+                <div className="card kpi-card"><span>TRANSACTION VALUE</span><strong>{fmt(overview.total_value)}</strong><small>{fmtInt(overview.transactions)} transactions</small></div>
                 <div className="card kpi-card"><span>SETTLEMENTS RECEIVED</span><strong>{fmt(overview.settlements_received)}</strong><small>Net after fees</small></div>
-                <div className="card kpi-card"><span>OPEN EXCEPTIONS</span><strong>{openExceptions.length}</strong><small>Needs investigation</small></div>
+                <div className="card kpi-card"><span>OPEN EXCEPTIONS</span><strong>{fmtInt(openExceptions.length)}</strong><small>Needs investigation</small></div>
               </section>
 
               <div className="overview-two-col">
                 <section className="panel">
-                  <div className="panel-head"><h3>Needs attention</h3><span className="count-badge">{openExceptions.length} open</span></div>
+                  <div className="panel-head"><h3>Needs attention</h3><span className="count-badge">{fmtInt(openExceptions.length)} open</span></div>
                   {openExceptions.length === 0 && <p className="empty">All clear — no open exceptions.</p>}
                   {openExceptions.slice(0, 3).map((e) => (
                     <div className="row" key={e.id}>
@@ -317,7 +478,7 @@ export default function App() {
                 <div className="card"><span>TOTAL GROSS</span><strong>{fmt(settleTotals.gross)}</strong><small>Before fees</small></div>
                 <div className="card"><span>TOTAL FEES</span><strong>{fmt(settleTotals.fee)}</strong><small>Provider charges</small></div>
                 <div className="card"><span>TOTAL NET</span><strong>{fmt(settleTotals.net)}</strong><small>Gross − Fee</small></div>
-                <div className="card"><span>SETTLEMENTS</span><strong>{filteredSettlements.length}</strong><small>Filtered view</small></div>
+                <div className="card"><span>SETTLEMENTS</span><strong>{fmtInt(filteredSettlements.length)}</strong><small>Filtered view</small></div>
               </section>
               <div className="table-wrap"><table className="table"><thead><tr><th>Settlement</th><th>Provider / Bank</th><th>Date</th><th>Gross</th><th>Fee</th><th>Net</th><th>Status</th></tr></thead>
                 <tbody>{filteredSettlements.map((s) => (<tr key={s.id}><td><strong>{s.id}</strong><small>{s.reference}</small></td><td>{s.provider}<small>{s.bank}</small></td><td>{s.date}</td><td>{fmt(s.gross)}</td><td>{fmt(s.fee)}</td><td><strong>{fmt(s.net)}</strong></td><td><span className={statusClass(s.status)}>{s.status}</span></td></tr>))}</tbody></table></div>
@@ -348,14 +509,14 @@ export default function App() {
                 <>
                   <div className="panel wizard-panel"><h3>✅ Run Complete — {recon.run_id}</h3>
                     <div className="cards">
-                      <div className="card"><span>TOTAL</span><strong>{recon.total}</strong><small>Checked</small></div>
-                      <div className="card"><span>MATCHED</span><strong>{recon.matched}</strong><small>Clean</small></div>
-                      <div className="card"><span>EXCEPTIONS</span><strong>{recon.exceptions_count}</strong><small>Needs investigation</small></div>
-                      <div className="card"><span>RATE</span><strong>{recon.rate}%</strong><small>Matched rate</small></div>
+                      <div className="card"><span>TOTAL</span><strong>{fmtInt(recon.total)}</strong><small>Checked</small></div>
+                      <div className="card"><span>MATCHED</span><strong>{fmtInt(recon.matched)}</strong><small>Clean</small></div>
+                      <div className="card"><span>EXCEPTIONS</span><strong>{fmtInt(recon.exceptions_count)}</strong><small>Needs investigation</small></div>
+                      <div className="card"><span>RATE</span><strong>{n(recon.rate)}%</strong><small>Matched rate</small></div>
                     </div>
                     <div className="wizard-actions"><button className="secondary-btn" onClick={() => { setWizardStep(1); setRecon(null); }}>↺ New Run</button><button className="primary-btn" onClick={() => setPage("exceptions")}>View Exceptions →</button></div>
                   </div>
-                  <div className="panel"><h3>Exceptions ({recon.exceptions_count})</h3>{asArray<Exc>(recon.exceptions).map((e) => (<div className="row" key={e.id}><div><strong>{e.type}</strong> · {e.id}<br /><small>{e.detail}</small></div><strong>{fmt(e.amount)}</strong></div>))}</div>
+                  <div className="panel"><h3>Exceptions ({fmtInt(recon.exceptions_count)})</h3>{asArray<Exc>(recon.exceptions).map((e) => (<div className="row" key={e.id}><div><strong>{e.type}</strong> · {e.id}<br /><small>{e.detail}</small></div><strong>{fmt(e.amount)}</strong></div>))}</div>
                 </>
               )}
             </>
@@ -363,11 +524,11 @@ export default function App() {
 
           {page === "exceptions" && (
             <>
-              <p className="hero-sub">Resolution Queue — click an exception to investigate. We never call it fraud — only "needs investigation".</p>
+              <p className="hero-sub">Resolution Queue — click an exception to investigate. We never call it fraud — only &quot;needs investigation&quot;.</p>
               <section className="cards">
-                <div className="card"><span>OPEN</span><strong>{openExceptions.length}</strong><small>Needs investigation</small></div>
-                <div className="card"><span>RESOLVED THIS SESSION</span><strong>{resolvedList.length}</strong><small>Audit logged</small></div>
-                <div className="card"><span>OPEN VALUE</span><strong>{fmt(openExceptions.reduce((a, e) => a + (e.amount || 0), 0))}</strong><small>Still unresolved</small></div>
+                <div className="card"><span>OPEN</span><strong>{fmtInt(openExceptions.length)}</strong><small>Needs investigation</small></div>
+                <div className="card"><span>RESOLVED THIS SESSION</span><strong>{fmtInt(resolvedList.length)}</strong><small>Audit logged</small></div>
+                <div className="card"><span>OPEN VALUE</span><strong>{fmt(openExceptions.reduce((a, e) => a + n(e.amount), 0))}</strong><small>Still unresolved</small></div>
               </section>
               <div className="filters">
                 <label>Type<select value={excFilter} onChange={(e) => setExcFilter(e.target.value)}><option>All</option><option>Missing Settlement</option><option>Amount Mismatch</option><option>Duplicate</option><option>Fee Discrepancy</option><option>Orphan Bank Credit</option><option>Timing Difference</option></select></label>
@@ -446,15 +607,15 @@ export default function App() {
                 <h3>Reconciliation Report — {workspaceName} · {reportPeriod}</h3>
                 <p className="note">Generated {new Date().toLocaleString()} · Run REC-2026-104 · Ledgerwatch does not move money.</p>
                 <div className="cards">
-                  <div className="card"><span>COLLECTED (INTERNAL)</span><strong>{fmt(overview.total_value)}</strong><small>{overview.transactions.toLocaleString()} transactions</small></div>
+                  <div className="card"><span>COLLECTED (INTERNAL)</span><strong>{fmt(overview.total_value)}</strong><small>{fmtInt(overview.transactions)} transactions</small></div>
                   <div className="card"><span>RECEIVED (SETTLEMENTS)</span><strong>{fmt(overview.settlements_received)}</strong><small>Net after fees</small></div>
-                  <div className="card"><span>FLAGGED</span><strong>{fmt(overview.flagged_total)}</strong><small>{overview.flagged_count} exceptions</small></div>
-                  <div className="card"><span>RECONCILIATION RATE</span><strong>{overview.reconciliation_rate}%</strong><small>{openExceptions.length} open · {resolvedList.length} resolved</small></div>
+                  <div className="card"><span>FLAGGED</span><strong>{fmt(overview.flagged_total)}</strong><small>{fmtInt(overview.flagged_count)} exceptions</small></div>
+                  <div className="card"><span>RECONCILIATION RATE</span><strong>{n(overview.reconciliation_rate)}%</strong><small>{fmtInt(openExceptions.length)} open · {fmtInt(resolvedList.length)} resolved</small></div>
                 </div>
                 <h4>By Exception Type</h4>
-                {asArray<BreakdownItem>(overview.breakdown).map((b) => (<div className="row" key={b.label}><div><strong>{b.label}</strong> <span>· {b.count} · {b.pct}</span></div><strong>{fmt(b.amount)}</strong></div>))}
+                {asArray<BreakdownItem>(overview.breakdown).map((b) => (<div className="row" key={b.label}><div><strong>{b.label}</strong> <span>· {fmtInt(b.count)} · {b.pct}</span></div><strong>{fmt(b.amount)}</strong></div>))}
                 <h4>What this means</h4>
-                <p>If Collected ≠ Received, the difference is in Exceptions. Resolve each exception with a reason + note, and the Audit Trail proves what you did. No mismatch is called fraud — only "needs investigation".</p>
+                <p>If Collected ≠ Received, the difference is in Exceptions. Resolve each exception with a reason + note, and the Audit Trail proves what you did. No mismatch is called fraud — only &quot;needs investigation&quot;.</p>
                 <div className="wizard-actions">
                   <button className="secondary-btn" onClick={() => downloadCSV("Exceptions")}>⬇ Export Exceptions</button>
                   <button className="secondary-btn" onClick={() => downloadCSV("Transactions")}>⬇ Export Transactions</button>
@@ -492,7 +653,7 @@ export default function App() {
               </div>
               <div className="panel" style={{ marginTop: 16 }}>
                 <h3>Your Account</h3>
-                <p><strong>Ahmad Magaji</strong><br /><small>Admin · Demo Commerce Ltd · ahmad@demo.com</small></p>
+                <p><strong>{user?.name || "Ahmad Magaji"}</strong><br /><small>{user?.business || "Demo Commerce Ltd"} · {user?.email || "ahmad@demo.com"}</small></p>
                 <p className="note">Ledgerwatch never asks for your bank login. It only reads CSVs / provider reports you upload. It never moves money.</p>
                 <button className="primary-btn" onClick={saveSettings}>💾 Save Settings</button>
               </div>
