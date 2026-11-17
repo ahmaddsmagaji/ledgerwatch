@@ -3,13 +3,11 @@ import "./App.css";
 
 const API_URL = "https://ledgerwatch-backend-v2.onrender.com";
 
-// ---------- PURPLE BRANDING - NO GREEN ANYMORE ----------
 const PURPLE = "#5B0DBA";
 const PURPLE2 = "#7C3AED";
 const PURPLE_DARK = "#2E1065";
 const LOGO = "/brand/logo.png";
 
-// ---------- SAFE NUMBERS - THIS FIXES THE WHITE SCREEN ----------
 const n = (v: any) => Number(v ?? 0);
 const fmt = (v: any) => "₦" + n(v).toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmtInt = (v: any) => n(v).toLocaleString("en-NG");
@@ -45,8 +43,8 @@ const INTEGRATIONS = [
   { name: "Paystack", desc: "Import settlements + fees automatically. No manual CSV.", status: "Planned • Not Connected", color: "#011C33" },
   { name: "Flutterwave", desc: "Import settlements + fees automatically. No manual CSV.", status: "Planned • Not Connected", color: "#F5A623" },
   { name: "Monnify", desc: "Import settlements + virtual account credits.", status: "Planned • Not Connected", color: "#0E7A4B" },
-  { name: "Google Sheets", desc: "Export any table to Sheets in 1 click. Works today.", status: "Available ✅", color: "#0F9D58" },
-  { name: "Bank Statement (CSV)", desc: "Upload any Nigerian bank statement CSV. Works today.", status: "Available ✅", color: "#5B0DBA" },
+  { name: "Google Sheets", desc: "Export any table to Sheets in 1 click. Works today.", status: "Available", color: "#0F9D58" },
+  { name: "Bank Statement (CSV)", desc: "Upload any Nigerian bank statement CSV. Works today.", status: "Available", color: "#5B0DBA" },
 ];
 
 function getUsers(): Record<string, User & { password: string }> {
@@ -56,14 +54,12 @@ function getSession(): User | null {
   try { return JSON.parse(localStorage.getItem("lw_session") || "null"); } catch { return null; }
 }
 
-// ---------- GOOGLE G ICON - SIMPLE, NO SVG, CANNOT BREAK ----------
 function GoogleIcon() {
   return (
     <span style={{ width: 18, height: 18, borderRadius: "50%", background: "#fff", border: "1px solid #e2e8f0", display: "inline-flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 13, color: "#4285F4", flexShrink: 0 }}>G</span>
   );
 }
 
-// ---------- YOUR LOGO ----------
 function LogoImg({ size = 40, radius = 10 }: { size?: number; radius?: number }) {
   return (
     <div style={{ width: size, height: size, borderRadius: radius, overflow: "hidden", background: "#000", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -81,10 +77,7 @@ function mapSummary(s: any): OverviewData {
   const atRiskNaira = atRiskKobo > 1000 ? atRiskKobo / 100 : atRiskKobo;
   const byType = s.by_type || {};
   const breakdown: BreakdownItem[] = Object.entries(byType).map(([label, v]: any) => ({
-    label,
-    count: n(v?.count),
-    pct: "—",
-    amount: n(v?.amount_at_risk_kobo) / 100,
+    label, count: n(v?.count), pct: "—", amount: n(v?.amount_at_risk_kobo) / 100,
   }));
   const rate = ordersTotal > 0 ? Math.round(((ordersMatched / ordersTotal) * 100) * 10) / 10 : 0;
   return {
@@ -122,10 +115,11 @@ export default function App() {
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotMsg, setForgotMsg] = useState("");
   const [showAccountMenu, setShowAccountMenu] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem("lw_dark") === "1");
+  const [mobileMenu, setMobileMenu] = useState(false);
   const [currentPw, setCurrentPw] = useState("");
   const [newPw, setNewPw] = useState("");
   const [pwMsg, setPwMsg] = useState("");
-
   const [backendStatus, setBackendStatus] = useState("Checking backend...");
   const [page, setPage] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -162,17 +156,40 @@ export default function App() {
   const [reportPeriod, setReportPeriod] = useState("This week");
   const [reportMsg, setReportMsg] = useState("");
 
+  useEffect(() => { document.body.classList.toggle("dark-mode", darkMode); localStorage.setItem("lw_dark", darkMode ? "1" : "0"); }, [darkMode]);
+
   useEffect(() => {
     if (view !== "app") return;
-    fetch(`${API_URL}/health`).then((r) => r.json()).then((d) => setBackendStatus(`✅ Backend connected: ${d.status}`)).catch(() => setBackendStatus("❌ Backend NOT connected"));
-    fetch(`${API_URL}/api/summary`).then((r) => r.json()).then((d) => { if (d && typeof d === "object") { setOverview(mapSummary(d)); setOverviewSource("Live from backend ✅"); } }).catch(() => {});
+    fetch(`${API_URL}/health`).then((r) => r.json()).then((d) => setBackendStatus(`Backend connected: ${d.status}`)).catch(() => setBackendStatus("Backend NOT connected"));
+    fetch(`${API_URL}/api/summary`).then((r) => r.json()).then((d) => { if (d && typeof d === "object") { setOverview(mapSummary(d)); setOverviewSource("Live from backend"); } }).catch(() => {});
     fetch(`${API_URL}/api/overview`).then((r) => r.json()).then((d) => { if (d && typeof d === "object" && d.total_value != null) { setOverview((prev) => ({ ...prev, ...d, breakdown: asArray<BreakdownItem>(d.breakdown ?? prev.breakdown) })); } }).catch(() => {});
     fetch(`${API_URL}/api/transactions`).then((r) => r.json()).then((d) => setTxns(asArray<Txn>(Array.isArray(d) ? d : (d as any)?.items))).catch(() => {});
     fetch(`${API_URL}/api/settlements`).then((r) => r.json()).then((d) => setSettlements(asArray<Settlement>(Array.isArray(d) ? d : (d as any)?.items))).catch(() => {});
     fetch(`${API_URL}/api/exceptions?limit=200`).then((r) => r.json()).then((d) => setExceptions(mapExceptions(d))).catch(() => {});
   }, [view]);
 
-  const openAuth = (mode: "login" | "signup") => { setAuthMode(mode); setAuthError(""); setShowForgot(false); setView("auth"); };
+  const openAuth = (mode: "login" | "signup") => { setAuthMode(mode); setAuthError(""); setShowForgot(false); setMobileMenu(false); setView("auth"); };
+
+  const handleGoogle = () => {
+    const cid = (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID;
+    if (!cid) { setAuthError("To enable real Google login: add VITE_GOOGLE_CLIENT_ID in Vercel → Settings → Environment Variables, then redeploy. Get it free from console.cloud.google.com → Credentials → OAuth Client ID."); return; }
+    setAuthError("Opening Google login...");
+    const s = document.createElement("script"); s.src = "https://accounts.google.com/gsi/client"; s.async = true;
+    s.onload = () => {
+      // @ts-ignore
+      window.google.accounts.id.initialize({ client_id: cid, callback: (res: any) => {
+        try {
+          const payload = JSON.parse(atob(res.credential.split(".")[1]));
+          const session: User = { name: payload.name || "Google User", email: payload.email, phone: "", business: "My Business" };
+          localStorage.setItem("lw_session", JSON.stringify(session));
+          setUser(session); setWorkspaceName("My Business"); setView("app");
+        } catch { setAuthError("Google login failed. Try email login."); }
+      }});
+      // @ts-ignore
+      window.google.accounts.id.prompt();
+    };
+    document.head.appendChild(s);
+  };
 
   const handleAuth = (e: React.FormEvent) => {
     e.preventDefault();
@@ -207,17 +224,17 @@ export default function App() {
     if (!users[email]) { setForgotMsg("No account with that email. Create an account first."); return; }
     users[email] = { ...users[email], password: "123456" };
     localStorage.setItem("lw_users", JSON.stringify(users));
-    setForgotMsg("✅ Password reset to 123456. Log in with 123456, then change it in Settings → Change Password.");
+    setForgotMsg("Password reset to 123456. Log in with 123456, then change it in Settings → Change Password.");
   };
 
   const handleChangePassword = () => {
     if (!user) return;
     const users = getUsers(); const found = users[user.email.toLowerCase()];
-    if (!found || found.password !== currentPw) { setPwMsg("❌ Current password is wrong."); return; }
-    if (newPw.length < 6) { setPwMsg("❌ New password must be at least 6 characters."); return; }
+    if (!found || found.password !== currentPw) { setPwMsg("Current password is wrong."); return; }
+    if (newPw.length < 6) { setPwMsg("New password must be at least 6 characters."); return; }
     users[user.email.toLowerCase()] = { ...found, password: newPw };
     localStorage.setItem("lw_users", JSON.stringify(users));
-    setPwMsg("✅ Password changed. Use the new password next time you log in."); setCurrentPw(""); setNewPw("");
+    setPwMsg("Password changed. Use the new password next time you log in."); setCurrentPw(""); setNewPw("");
   };
 
   const logout = () => { localStorage.removeItem("lw_session"); setUser(null); setShowAccountMenu(false); setView("landing"); };
@@ -246,7 +263,7 @@ export default function App() {
     } catch {}
     setResolvedIds((prev) => new Set(prev).add(selectedExc.id));
     setAudit((a) => [{ time: "Just now", action: `Resolved ${selectedExc.id} (${selectedExc.type}) — ${reason}${note ? ` — Note: ${note}` : ""}`, by: assignee }, ...a]);
-    setResolveMsg(`✅ ${selectedExc.id} resolved — ${reason}`);
+    setResolveMsg(`${selectedExc.id} resolved — ${reason}`);
     setNote("");
     setTimeout(() => setResolveMsg(""), 4000);
   };
@@ -273,7 +290,7 @@ export default function App() {
     a.download = `ledgerwatch-${ds.toLowerCase()}-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    setExportMsg(`✅ Downloaded ${rows.length} rows — open in Google Sheets: File → Import → Upload`);
+    setExportMsg(`Downloaded ${rows.length} rows — open in Google Sheets: File → Import → Upload`);
     setTimeout(() => setExportMsg(""), 6000);
   };
 
@@ -304,12 +321,12 @@ export default function App() {
     a.download = `ledgerwatch-report-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    setReportMsg(`✅ Report downloaded for ${reportPeriod} — ${workspaceName}`);
+    setReportMsg(`Report downloaded for ${reportPeriod} — ${workspaceName}`);
     setTimeout(() => setReportMsg(""), 6000);
   };
 
   const saveSettings = () => {
-    setSettingsMsg(`✅ Settings saved — Workspace: ${workspaceName} · Currency: ${currency} · Amount tolerance: ₦${tolerance} · Date tolerance: ${dateTolerance} day(s)`);
+    setSettingsMsg(`Settings saved — Workspace: ${workspaceName} · Currency: ${currency} · Amount tolerance: ₦${tolerance} · Date tolerance: ${dateTolerance} day(s)`);
     setAudit((a) => [{ time: "Just now", action: `Settings updated — tolerance ₦${tolerance}, date ±${dateTolerance} day(s)`, by: user?.name || "Ahmad Magaji" }, ...a]);
     setTimeout(() => setSettingsMsg(""), 5000);
   };
@@ -352,34 +369,51 @@ export default function App() {
   if (view === "landing") {
     return (
       <div style={{ fontFamily: "system-ui, sans-serif", color: "#0f172a", background: "#fff", minHeight: "100vh" }}>
-        <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 24px", maxWidth: 1120, flexWrap: "wrap", gap: 12, margin: "0 auto" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}><LogoImg size={44} radius={12} /><div><div style={{ fontWeight: 900, fontSize: 23, lineHeight: 1 }}>Ledgerwatch</div><div style={{ fontSize: 10, color: PURPLE, fontWeight: 800, letterSpacing: 1.2 }}>RECONCILE • PROVE • RESOLVE</div></div></div>
-          <div style={{ display: "flex", gap: 10 }}>
+        <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px", maxWidth: 1120, margin: "0 auto", position: "sticky", top: 0, background: "#fff", zIndex: 20, flexWrap: "wrap", gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}><LogoImg size={40} radius={10} /><div><div style={{ fontWeight: 900, fontSize: 22, lineHeight: 1 }}>Ledgerwatch</div><div style={{ fontSize: 10, color: PURPLE, fontWeight: 800, letterSpacing: 1.2 }}>RECONCILE • PROVE • RESOLVE</div></div></div>
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
             {user ? (
-              <button onClick={() => setView("app")} style={{ padding: "10px 18px", borderRadius: 999, border: "none", background: PURPLE, color: "#fff", fontWeight: 800, cursor: "pointer" }}>← Back to App ({user.name})</button>
+              <button onClick={() => setView("app")} style={{ padding: "10px 18px", borderRadius: 999, border: "none", background: PURPLE, color: "#fff", fontWeight: 800, cursor: "pointer" }}>Back to App ({user.name})</button>
             ) : (
               <>
-                <button onClick={() => openAuth("login")} style={{ padding: "10px 18px", borderRadius: 999, border: "1px solid #e2e8f0", background: "#fff", fontWeight: 700, cursor: "pointer" }}>Log in</button>
-                <button onClick={() => openAuth("signup")} style={{ padding: "10px 18px", borderRadius: 999, border: "none", background: PURPLE, color: "#fff", fontWeight: 800, cursor: "pointer" }}>Create account</button>
+                <button onClick={() => setDarkMode((v) => !v)} style={{ padding: "10px 12px", borderRadius: 999, border: "1px solid #e2e8f0", background: "#fff", fontWeight: 700, cursor: "pointer" }}>{darkMode ? "Light" : "Dark"}</button>
+                <button onClick={() => setMobileMenu((v) => !v)} style={{ padding: "10px 14px", borderRadius: 10, border: "1px solid #e2e8f0", background: "#fff", fontSize: 20, cursor: "pointer" }}>{mobileMenu ? "X" : "☰"}</button>
               </>
             )}
           </div>
-        </header>
-        <section style={{ background: `linear-gradient(135deg, ${PURPLE_DARK} 0%, ${PURPLE} 55%, ${PURPLE2} 100%)`, color: "#fff" }}>
-          <div style={{ maxWidth: 1120, margin: "0 auto", padding: "clamp(28px, 5vw, 52px) 20px clamp(28px, 5vw, 56px)", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 32, alignItems: "center" }}>
-            <div>
-              <div style={{ display: "inline-block", background: "rgba(255,255,255,0.16)", border: "1px solid rgba(255,255,255,0.25)", padding: "6px 12px", borderRadius: 999, fontSize: 12, fontWeight: 800, letterSpacing: 1 }}>PAYMENT SETTLEMENT RECONCILIATION • FOR NIGERIAN BUSINESSES</div>
-              <h1 style={{ fontSize: "clamp(32px, 6vw, 54px)", lineHeight: 1.02, letterSpacing: -1.5, margin: "18px 0 14px" }}>Know what you earned.<br />Find what hasn&apos;t arrived.</h1>
-              <p style={{ fontSize: 18, color: "#e9d5ff", lineHeight: 1.65, maxWidth: 560 }}>Did the money you sold actually enter your bank? Ledgerwatch checks <b style={{ color: "#fff" }}>every order</b> against <b style={{ color: "#fff" }}>Monnify settlements</b> and <b style={{ color: "#fff" }}>bank deposits</b> — and shows you exactly what is missing, short, or charged wrong.</p>
-              <div style={{ display: "flex", gap: 12, marginTop: 26, flexWrap: "wrap" }}>
-                <button onClick={() => openAuth("signup")} style={{ padding: "14px 24px", borderRadius: 12, border: "none", background: "#fff", color: PURPLE_DARK, fontWeight: 900, fontSize: 16, cursor: "pointer" }}>Book a Demo →</button>
-                <button onClick={() => openAuth("login")} style={{ padding: "14px 24px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.4)", background: "transparent", color: "#fff", fontWeight: 700, fontSize: 16, cursor: "pointer" }}>See How It Works</button>
+          {mobileMenu && !user && (
+            <div style={{ width: "100%", background: "#fff", borderTop: "1px solid #f1f5f9", padding: "12px 4px 20px", display: "flex", flexDirection: "column", gap: 4 }}>
+              <button onClick={() => { setMobileMenu(false); document.getElementById("features")?.scrollIntoView({ behavior: "smooth" }); }} style={{ textAlign: "left", padding: "14px 8px", background: "none", border: "none", fontSize: 17, fontWeight: 600, color: "#334155", cursor: "pointer" }}>Features</button>
+              <button onClick={() => { setMobileMenu(false); document.getElementById("how")?.scrollIntoView({ behavior: "smooth" }); }} style={{ textAlign: "left", padding: "14px 8px", background: "none", border: "none", fontSize: 17, fontWeight: 600, color: "#334155", cursor: "pointer" }}>How it works</button>
+              <button onClick={() => { setMobileMenu(false); document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" }); }} style={{ textAlign: "left", padding: "14px 8px", background: "none", border: "none", fontSize: 17, fontWeight: 600, color: "#334155", cursor: "pointer" }}>Pricing</button>
+              <button onClick={() => { setMobileMenu(false); document.getElementById("faq")?.scrollIntoView({ behavior: "smooth" }); }} style={{ textAlign: "left", padding: "14px 8px", background: "none", border: "none", fontSize: 17, fontWeight: 600, color: "#334155", cursor: "pointer" }}>FAQ</button>
+              <div style={{ borderTop: "1px solid #e2e8f0", margin: "12px 0", paddingTop: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+                <button onClick={() => openAuth("login")} style={{ padding: "14px", borderRadius: 14, border: "1px solid #e2e8f0", background: "#fff", fontWeight: 700, cursor: "pointer" }}>Log In</button>
+                <button onClick={() => openAuth("signup")} style={{ padding: "14px", borderRadius: 14, border: "none", background: PURPLE, color: "#fff", fontWeight: 800, cursor: "pointer" }}>Start Free</button>
+                <p style={{ fontSize: 13, color: "#64748b", textAlign: "center", margin: 0 }}>Setup takes 2 mins. No credit card required.</p>
               </div>
-              <p style={{ fontSize: 13, color: "#d8b4fe", marginTop: 12 }}>✓ No card required &nbsp;•&nbsp; ✓ Your workspace is separate &nbsp;•&nbsp; ✓ We never move your money</p>
             </div>
-            <div style={{ background: "#fff", color: "#0f172a", borderRadius: 20, padding: 24, boxShadow: "0 24px 60px rgba(0,0,0,0.3)" }}>
+          )}
+        </header>
+
+        <section style={{ background: "#fff", color: "#0f172a" }}>
+          <div style={{ maxWidth: 760, margin: "0 auto", padding: "clamp(36px, 6vw, 64px) 20px 28px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
+            <div style={{ display: "inline-block", background: "#f5f3ff", border: "1px solid #e9d5ff", padding: "6px 12px", borderRadius: 999, fontSize: 12, fontWeight: 800, letterSpacing: 1, color: PURPLE }}>PAYMENT SETTLEMENT RECONCILIATION • FOR NIGERIAN BUSINESSES</div>
+            <h1 style={{ fontSize: "clamp(36px, 8vw, 56px)", lineHeight: 1.05, letterSpacing: -1.5, margin: "18px 0 14px", color: "#0f172a", textAlign: "center" }}>Know what you earned.<br />Find what hasn&apos;t arrived.</h1>
+            <p style={{ fontSize: 18, color: "#475569", lineHeight: 1.7, maxWidth: 620, textAlign: "center" }}>Did the money you sold actually enter your bank? Ledgerwatch checks <b>every order</b> against <b>Monnify settlements</b> and <b>bank deposits</b> — and shows you exactly what is missing, short, or charged wrong.</p>
+            <div style={{ display: "flex", gap: 12, marginTop: 26, flexWrap: "wrap", justifyContent: "center", width: "100%" }}>
+              <button onClick={() => openAuth("signup")} style={{ width: "100%", maxWidth: 420, padding: "16px 24px", borderRadius: 14, border: "none", background: PURPLE, color: "#fff", fontWeight: 800, fontSize: 16, cursor: "pointer" }}>Start Free →</button>
+              <button onClick={() => document.getElementById("how")?.scrollIntoView({ behavior: "smooth" })} style={{ width: "100%", maxWidth: 420, padding: "16px 24px", borderRadius: 14, border: "1px solid #e2e8f0", background: "#fff", color: "#0f172a", fontWeight: 700, fontSize: 16, cursor: "pointer" }}>Watch 2-Min Demo</button>
+            </div>
+            <p style={{ fontSize: 13, color: "#64748b", marginTop: 14 }}>Setup takes 2 mins. No credit card required.</p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, borderTop: "1px solid #e2e8f0", borderBottom: "1px solid #e2e8f0", padding: "20px 0", marginTop: 28, width: "100%", textAlign: "center" }}>
+              <div><div style={{ fontWeight: 900, fontSize: 18 }}>3 sources</div><div style={{ fontSize: 12, color: "#64748b" }}>Orders • Settlements • Bank</div></div>
+              <div><div style={{ fontWeight: 900, fontSize: 18 }}>Separate</div><div style={{ fontSize: 12, color: "#64748b" }}>Your workspace is yours</div></div>
+              <div><div style={{ fontWeight: 900, fontSize: 18 }}>Never moves</div><div style={{ fontSize: 12, color: "#64748b" }}>We never move money</div></div>
+            </div>
+            <div style={{ background: "#fff", color: "#0f172a", borderRadius: 20, padding: 24, boxShadow: "0 12px 40px rgba(0,0,0,0.08)", border: "1px solid #e2e8f0", width: "100%", marginTop: 28, textAlign: "left" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><b>LIVE EXAMPLE</b><span style={{ background: "#fef3c7", color: "#92400e", padding: "4px 10px", borderRadius: 999, fontSize: 12, fontWeight: 800 }}>Needs investigation</span></div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12, marginTop: 18 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginTop: 18 }}>
                 <div style={{ background: "#f8fafc", borderRadius: 12, padding: 14 }}><div style={{ fontSize: 11, color: "#64748b", fontWeight: 700 }}>EXPECTED SETTLEMENT</div><div style={{ fontSize: 22, fontWeight: 900 }}>₦98,500</div><div style={{ fontSize: 12, color: "#64748b" }}>What Monnify should send</div></div>
                 <div style={{ background: "#f8fafc", borderRadius: 12, padding: 14 }}><div style={{ fontSize: 11, color: "#64748b", fontWeight: 700 }}>BANK DEPOSIT</div><div style={{ fontSize: 22, fontWeight: 900 }}>₦96,500</div><div style={{ fontSize: 12, color: "#64748b" }}>What actually hit bank</div></div>
               </div>
@@ -389,34 +423,70 @@ export default function App() {
             </div>
           </div>
         </section>
-        <section style={{ maxWidth: 1120, margin: "0 auto", padding: "48px 24px 0" }}>
-          <h2 style={{ fontSize: 28, margin: "0 0 8px" }}>What is Ledgerwatch?</h2>
-          <p style={{ color: "#475569", fontSize: 17, lineHeight: 1.7, maxWidth: 760 }}>You sell. Monnify collects. Your bank should receive. But sometimes the numbers don&apos;t match — a settlement is missing, a fee is wrong, a POS sale never lands. Ledgerwatch is the <b>truth-checker</b> between those 3 numbers. It doesn&apos;t move money. It <b>proves where your money went.</b></p>
+
+        <section id="features" style={{ maxWidth: 1120, margin: "0 auto", padding: "48px 20px 0" }}>
+          <h2 style={{ fontSize: 28, margin: "0 0 8px", textAlign: "center" }}>What is Ledgerwatch?</h2>
+          <p style={{ color: "#475569", fontSize: 17, lineHeight: 1.7, maxWidth: 760, margin: "0 auto", textAlign: "center" }}>You sell. Monnify collects. Your bank should receive. Ledgerwatch is the <b>truth-checker</b> between those 3 numbers. It doesn&apos;t move money. It <b>proves where your money went.</b></p>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 16, marginTop: 24 }}>
             {[
-              { e: "📦", t: "Orders", d: "What your system says you sold — every order, reference, customer, amount." },
-              { e: "💳", t: "Settlements", d: "What Monnify / Paystack / Flutterwave says they sent — Gross − Fee = Net." },
-              { e: "🏦", t: "Bank Deposits", d: "What actually hit your bank — the only number that pays your bills." },
-              { e: "⚠", t: "Exceptions", d: "Only the breaks. Missing, mismatch, duplicate, fee error, orphan credit, timing break." },
-            ].map((c) => (<div key={c.t} style={{ border: "1px solid #e2e8f0", borderRadius: 16, padding: 20 }}><div style={{ fontSize: 28 }}>{c.e}</div><div style={{ fontWeight: 800, margin: "8px 0 6px" }}>{c.t}</div><div style={{ color: "#475569", fontSize: 14, lineHeight: 1.6 }}>{c.d}</div></div>))}
+              { t: "Orders", d: "What your system says you sold — every order, reference, customer, amount." },
+              { t: "Settlements", d: "What Monnify / Paystack / Flutterwave says they sent — Gross − Fee = Net." },
+              { t: "Bank Deposits", d: "What actually hit your bank — the only number that pays your bills." },
+              { t: "Exceptions", d: "Only the breaks. Missing, mismatch, duplicate, fee error, orphan credit, timing break." },
+            ].map((c) => (<div key={c.t} style={{ border: "1px solid #e2e8f0", borderRadius: 16, padding: 20 }}><div style={{ fontWeight: 800, margin: "8px 0 6px" }}>{c.t}</div><div style={{ color: "#475569", fontSize: 14, lineHeight: 1.6 }}>{c.d}</div></div>))}
           </div>
         </section>
-        <section style={{ maxWidth: 1120, margin: "0 auto", padding: "48px 24px 0" }}>
-          <h2 style={{ fontSize: 28, margin: "0 0 8px" }}>How to use it — 3 steps, 5 minutes</h2>
+
+        <section id="how" style={{ maxWidth: 1120, margin: "0 auto", padding: "48px 20px 0" }}>
+          <h2 style={{ fontSize: 28, margin: "0 0 8px", textAlign: "center" }}>How to use it — 3 steps, 5 minutes</h2>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16, marginTop: 16 }}>
             {[
-              { n: "1", t: "Create your workspace", d: "Sign up with email + phone. Your business gets its own workspace — your data is only yours. No other business can see it." },
-              { n: "2", t: "Add your 3 records", d: "Add Orders, Settlements, Bank credits. Paste, upload CSV, or enter manually. No CSV required to start. We match by reference, then check Gross − Fee = Net." },
-              { n: "3", t: "Fix only the breaks", d: "Open Exceptions. Click one. See the evidence. Assign it, add a note, resolve it with a reason. Audit trail proves what you did. Export to Sheets for your accountant." },
+              { n: "1", t: "Create your workspace", d: "Sign up with email + phone. Your business gets its own workspace — your data is only yours." },
+              { n: "2", t: "Add your 3 records", d: "Add Orders, Settlements, Bank credits. Paste, upload CSV, or enter manually. We match by reference, then check Gross − Fee = Net." },
+              { n: "3", t: "Fix only the breaks", d: "Open Exceptions. Click one. See the evidence. Assign it, add a note, resolve it with a reason. Audit trail proves what you did." },
             ].map((c) => (<div key={c.n} style={{ background: "#faf5ff", border: "1px solid #e9d5ff", borderRadius: 16, padding: 22 }}><div style={{ width: 36, height: 36, borderRadius: 999, background: PURPLE, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900 }}>{c.n}</div><div style={{ fontWeight: 800, fontSize: 17, margin: "12px 0 6px" }}>{c.t}</div><div style={{ color: "#475569", fontSize: 14, lineHeight: 1.6 }}>{c.d}</div></div>))}
           </div>
         </section>
-        <section style={{ maxWidth: 1120, margin: "0 auto", padding: "48px 24px 60px" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
-            <div style={{ border: `2px solid ${PURPLE}`, borderRadius: 16, padding: 22 }}><h3 style={{ margin: "0 0 10px" }}>✅ Who it&apos;s for</h3><ul style={{ color: "#475569", lineHeight: 1.8, margin: 0, paddingLeft: 18 }}><li>E-commerce stores using Monnify + POS</li><li>Shops with many daily sales to reconcile</li><li>Businesses tired of manual Excel reconciliation</li><li>Owners who want proof for their accountant</li></ul></div>
-            <div style={{ border: "1px solid #e2e8f0", borderRadius: 16, padding: 22 }}><h3 style={{ margin: "0 0 10px" }}>❌ What it&apos;s NOT</h3><ul style={{ color: "#475569", lineHeight: 1.8, margin: 0, paddingLeft: 18 }}><li>Not a payment gateway — we don&apos;t collect money</li><li>Not a bank — we never ask for bank login</li><li>Not an accounting clone — we do one thing: reconciliation</li><li>We never call a mismatch &quot;fraud&quot; — only &quot;needs investigation&quot;</li></ul></div>
+
+        <section id="pricing" style={{ maxWidth: 1120, margin: "0 auto", padding: "48px 20px 0" }}>
+          <h2 style={{ fontSize: 28, margin: "0 0 8px", textAlign: "center" }}>Pricing</h2>
+          <p style={{ color: "#475569", textAlign: "center", margin: "0 0 20px" }}>Start free. Upgrade when you grow.</p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16 }}>
+            {[
+              { name: "Starter", price: "₦10,000", per: "/month", desc: "For small shops getting started.", feats: ["1 workspace", "Manual + CSV import", "Exceptions + audit trail", "Export to Sheets"] },
+              { name: "Growth", price: "₦90,000", per: "/month", desc: "For growing businesses with daily sales.", feats: ["Everything in Starter", "More transactions", "Team assignments", "Priority support"] },
+              { name: "Scale", price: "₦270,000", per: "/month", desc: "For distributors + multi-branch.", feats: ["Everything in Growth", "Multiple workspaces", "Advanced reports", "Dedicated support"] },
+            ].map((p) => (
+              <div key={p.name} style={{ border: p.name === "Growth" ? `2px solid ${PURPLE}` : "1px solid #e2e8f0", borderRadius: 16, padding: 22 }}>
+                <div style={{ fontWeight: 800 }}>{p.name}</div>
+                <div style={{ fontSize: 28, fontWeight: 900, margin: "8px 0 2px" }}>{p.price} <span style={{ fontSize: 13, fontWeight: 600, color: "#64748b" }}>{p.per}</span></div>
+                <div style={{ color: "#475569", fontSize: 14 }}>{p.desc}</div>
+                <ul style={{ color: "#475569", fontSize: 14, lineHeight: 1.8, paddingLeft: 18 }}>{p.feats.map((f) => <li key={f}>{f}</li>)}</ul>
+                <button onClick={() => openAuth("signup")} style={{ width: "100%", padding: 12, borderRadius: 10, border: "none", background: PURPLE, color: "#fff", fontWeight: 800, cursor: "pointer" }}>Start Free</button>
+              </div>
+            ))}
           </div>
-          <div style={{ background: PURPLE_DARK, color: "#fff", borderRadius: 20, padding: 28, marginTop: 24, textAlign: "center" }}><h2 style={{ margin: "0 0 8px" }}>Stop guessing where your money went.</h2><p style={{ color: "#d8b4fe", margin: "0 0 18px" }}>Create your workspace and see your first reconciliation in minutes.</p><button onClick={() => openAuth("signup")} style={{ padding: "14px 28px", borderRadius: 12, border: "none", background: "#fff", color: PURPLE_DARK, fontWeight: 900, cursor: "pointer" }}>Create free account →</button></div>
+        </section>
+
+        <section style={{ maxWidth: 1120, margin: "0 auto", padding: "48px 20px 0" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
+            <div style={{ border: `2px solid ${PURPLE}`, borderRadius: 16, padding: 22 }}><h3 style={{ margin: "0 0 10px" }}>Who it&apos;s for</h3><ul style={{ color: "#475569", lineHeight: 1.8, margin: 0, paddingLeft: 18 }}><li>E-commerce stores using Monnify + POS</li><li>Shops with many daily sales to reconcile</li><li>Businesses tired of manual Excel reconciliation</li><li>Owners who want proof for their accountant</li></ul></div>
+            <div style={{ border: "1px solid #e2e8f0", borderRadius: 16, padding: 22 }}><h3 style={{ margin: "0 0 10px" }}>What it&apos;s NOT</h3><ul style={{ color: "#475569", lineHeight: 1.8, margin: 0, paddingLeft: 18 }}><li>Not a payment gateway — we don&apos;t collect money</li><li>Not a bank — we never ask for bank login</li><li>Not an accounting clone — we do one thing: reconciliation</li><li>We never call a mismatch fraud — only needs investigation</li></ul></div>
+          </div>
+        </section>
+
+        <section id="faq" style={{ maxWidth: 760, margin: "0 auto", padding: "48px 20px 0" }}>
+          <h2 style={{ fontSize: 28, textAlign: "center" }}>FAQ</h2>
+          {[
+            { q: "Do you move my money?", a: "No. Ledgerwatch only reads the records you add. It never moves money and never asks for bank login." },
+            { q: "Do I need CSV to start?", a: "No. You can paste, enter manually, or upload CSV. Start with what you have." },
+            { q: "What is an exception?", a: "A break between Orders, Settlements and Bank — missing, mismatch, duplicate, fee error, orphan credit, or timing difference." },
+            { q: "Can my accountant use it?", a: "Yes. Export any table or report to CSV and open it in Google Sheets." },
+          ].map((f) => (<div key={f.q} style={{ border: "1px solid #e2e8f0", borderRadius: 12, padding: 18, marginBottom: 12 }}><b>{f.q}</b><div style={{ color: "#475569", marginTop: 6, lineHeight: 1.6 }}>{f.a}</div></div>))}
+        </section>
+
+        <section style={{ maxWidth: 1120, margin: "0 auto", padding: "48px 20px 60px" }}>
+          <div style={{ background: PURPLE_DARK, color: "#fff", borderRadius: 20, padding: 28, textAlign: "center" }}><h2 style={{ margin: "0 0 8px" }}>Stop guessing where your money went.</h2><p style={{ color: "#d8b4fe", margin: "0 0 18px" }}>Create your workspace and see your first reconciliation in minutes.</p><button onClick={() => openAuth("signup")} style={{ padding: "14px 28px", borderRadius: 12, border: "none", background: "#fff", color: PURPLE_DARK, fontWeight: 900, cursor: "pointer" }}>Create free account →</button></div>
         </section>
         <footer style={{ borderTop: "1px solid #e2e8f0", padding: "20px 24px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>Ledgerwatch — Reconcile payments, settlements and bank deposits. We never move your money.</footer>
       </div>
@@ -435,7 +505,7 @@ export default function App() {
               <button key={m} onClick={() => { setAuthMode(m); setAuthError(""); setShowForgot(false); }} style={{ flex: 1, padding: "10px", borderRadius: 999, border: "none", background: authMode === m ? "#fff" : "transparent", fontWeight: 700, cursor: "pointer" }}>{m === "signup" ? "Sign up" : "Log in"}</button>
             ))}
           </div>
-          <button onClick={() => setAuthError("Google login is coming next — for now, create an account with email + password below.")} style={{ width: "100%", padding: 12, borderRadius: 10, border: "1px solid #e2e8f0", background: "#fff", fontWeight: 700, cursor: "pointer", marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}><GoogleIcon /> Continue with Google</button>
+          <button onClick={handleGoogle} style={{ width: "100%", padding: 12, borderRadius: 10, border: "1px solid #e2e8f0", background: "#fff", fontWeight: 700, cursor: "pointer", marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}><GoogleIcon /> Continue with Google</button>
           <div style={{ textAlign: "center", color: "#94a3b8", fontSize: 12, marginBottom: 16 }}>or with email</div>
           {!showForgot ? (
             <form onSubmit={handleAuth} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -456,12 +526,12 @@ export default function App() {
             <form onSubmit={handleForgot} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <p style={{ margin: 0, color: "#475569", fontSize: 14 }}>Enter your email. We&apos;ll reset your password.</p>
               <input value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} placeholder="Email you signed up with" style={{ padding: 12, borderRadius: 10, border: "1px solid #e2e8f0" }} />
-              {forgotMsg && <div style={{ color: forgotMsg.startsWith("✅") ? "#15803d" : "#dc2626", fontSize: 13 }}>{forgotMsg}</div>}
+              {forgotMsg && <div style={{ color: forgotMsg.startsWith("Password") ? "#15803d" : "#dc2626", fontSize: 13 }}>{forgotMsg}</div>}
               <button type="submit" style={{ padding: 13, borderRadius: 10, border: "none", background: PURPLE, color: "#fff", fontWeight: 800, cursor: "pointer" }}>Reset password →</button>
-              <button type="button" onClick={() => setShowForgot(false)} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer" }}>← Back to log in</button>
+              <button type="button" onClick={() => setShowForgot(false)} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer" }}>Back to log in</button>
             </form>
           )}
-          <button onClick={() => setView("landing")} style={{ marginTop: 16, width: "100%", background: "none", border: "none", color: "#64748b", cursor: "pointer" }}>← Back to home</button>
+          <button onClick={() => setView("landing")} style={{ marginTop: 16, width: "100%", background: "none", border: "none", color: "#64748b", cursor: "pointer" }}>Back to home</button>
         </div>
       </div>
     );
@@ -473,7 +543,7 @@ export default function App() {
         <div className="sidebar-brand">
           <LogoImg size={38} />
           <div><strong>Ledgerwatch</strong><small>{workspaceName}</small></div>
-          <button className="close-btn" onClick={() => setSidebarOpen(false)}>✕</button>
+          <button className="close-btn" onClick={() => setSidebarOpen(false)}>X</button>
         </div>
         <p className="menu-title">MENU</p>
         <nav>{menu.map((m) => (
@@ -483,8 +553,8 @@ export default function App() {
         <div className="sidebar-footer">
           <p>Sync. Reconcile. Resolve.</p>
           <small>Ledgerwatch does not move money.</small>
-          <button onClick={() => setView("landing")} style={{ marginTop: 10, width: "100%", background: "transparent", border: "1px solid rgba(255,255,255,0.4)", borderRadius: 999, padding: "10px 12px", cursor: "pointer", fontWeight: 800, color: "#fff" }}>🏠 View Landing Page</button>
-          <button onClick={logout} style={{ marginTop: 8, width: "100%", background: "#ffffff", border: "none", borderRadius: 999, padding: "10px 12px", cursor: "pointer", fontWeight: 800, fontSize: 14, color: "#2E1065" }}>🚪 Log out</button>
+          <button onClick={() => setView("landing")} style={{ marginTop: 10, width: "100%", background: "transparent", border: "1px solid rgba(255,255,255,0.4)", borderRadius: 999, padding: "10px 12px", cursor: "pointer", fontWeight: 800, color: "#fff" }}>View Landing Page</button>
+          <button onClick={logout} style={{ marginTop: 8, width: "100%", background: "#ffffff", border: "none", borderRadius: 999, padding: "10px 12px", cursor: "pointer", fontWeight: 800, fontSize: 14, color: "#2E1065" }}>Log out</button>
         </div>
       </aside>
       {sidebarOpen && <div className="overlay" onClick={() => setSidebarOpen(false)} />}
@@ -493,18 +563,19 @@ export default function App() {
         <header className="topbar" style={{ position: "relative" }}>
           <button className="hamburger" onClick={() => setSidebarOpen(true)}>☰</button><h2>{activeLabel}</h2>
           <input className="search" placeholder="Search TXN, EXC, reference..." value={search} onChange={(e) => setSearch(e.target.value)} />
-          <span className={backendStatus.includes("✅") ? "backend-pill ok" : "backend-pill bad"}>{backendStatus}</span>
+          <span className={backendStatus.includes("connected") ? "backend-pill ok" : "backend-pill bad"}>{backendStatus}</span>
+          <button onClick={() => setDarkMode((v) => !v)} style={{ padding: "8px 12px", borderRadius: 999, border: "1px solid #e2e8f0", background: "#fff", cursor: "pointer", fontWeight: 700 }}>{darkMode ? "Light" : "Dark"}</button>
           <div style={{ position: "relative" }}>
             <button onClick={() => setShowAccountMenu((v) => !v)} style={{ display: "flex", alignItems: "center", gap: 8, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 999, padding: "6px 12px 6px 6px", cursor: "pointer" }}>
               <span className="avatar" style={{ background: PURPLE }}>{(user?.name || "A").slice(0, 1)}</span>
-              <span style={{ textAlign: "left", lineHeight: 1.2 }}><strong style={{ fontSize: 13 }}>{user?.name || "Ahmad Magaji"}</strong><br /><small style={{ color: "#64748b" }}>Tap for account ▾</small></span>
+              <span style={{ textAlign: "left", lineHeight: 1.2 }}><strong style={{ fontSize: 13 }}>{user?.name || "Ahmad Magaji"}</strong><br /><small style={{ color: "#64748b" }}>Tap for account</small></span>
             </button>
             {showAccountMenu && (
               <div style={{ position: "absolute", right: 0, top: 52, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, boxShadow: "0 12px 32px rgba(0,0,0,0.14)", width: 230, zIndex: 50, overflow: "hidden" }}>
                 <div style={{ padding: "12px 14px", borderBottom: "1px solid #f1f5f9" }}><strong>{user?.name}</strong><br /><small style={{ color: "#64748b" }}>{user?.email}<br />{user?.business}</small></div>
-                <button onClick={goSettings} style={{ width: "100%", textAlign: "left", padding: "12px 14px", background: "none", border: "none", cursor: "pointer", fontSize: 14 }}>⚙ Settings</button>
-                <button onClick={goSettings} style={{ width: "100%", textAlign: "left", padding: "12px 14px", background: "none", border: "none", cursor: "pointer", fontSize: 14, borderTop: "1px solid #f1f5f9" }}>🔑 Change Password</button>
-                <button onClick={logout} style={{ width: "100%", textAlign: "left", padding: "12px 14px", background: "none", border: "none", cursor: "pointer", fontSize: 14, color: "#dc2626", borderTop: "1px solid #f1f5f9" }}>🚪 Log out</button>
+                <button onClick={goSettings} style={{ width: "100%", textAlign: "left", padding: "12px 14px", background: "none", border: "none", cursor: "pointer", fontSize: 14 }}>Settings</button>
+                <button onClick={goSettings} style={{ width: "100%", textAlign: "left", padding: "12px 14px", background: "none", border: "none", cursor: "pointer", fontSize: 14, borderTop: "1px solid #f1f5f9" }}>Change Password</button>
+                <button onClick={logout} style={{ width: "100%", textAlign: "left", padding: "12px 14px", background: "none", border: "none", cursor: "pointer", fontSize: 14, color: "#dc2626", borderTop: "1px solid #f1f5f9" }}>Log out</button>
               </div>
             )}
           </div>
@@ -524,10 +595,9 @@ export default function App() {
                       <option>This week</option><option>This month</option><option>Last month</option><option>All time</option>
                     </select>
                   </label>
-                  <span className="freshness-pill">{overviewSource} • Updated just now</span>
+                  <span className="freshness-pill">{overviewSource}</span>
                 </div>
               </div>
-
               <section className="kpi-grid">
                 <div className="card kpi-card kpi-primary">
                   <span>RECONCILIATION RATE</span>
@@ -539,7 +609,6 @@ export default function App() {
                 <div className="card kpi-card"><span>SETTLEMENTS RECEIVED</span><strong>{fmt(overview.settlements_received)}</strong><small>Net after fees</small></div>
                 <div className="card kpi-card"><span>OPEN EXCEPTIONS</span><strong>{fmtInt(openExceptions.length)}</strong><small>Needs investigation</small></div>
               </section>
-
               <div className="overview-two-col">
                 <section className="panel">
                   <div className="panel-head"><h3>Needs attention</h3><span className="count-badge">{fmtInt(openExceptions.length)} open</span></div>
@@ -552,7 +621,6 @@ export default function App() {
                   ))}
                   <button className="link-btn" onClick={() => setPage("exceptions")}>View all open exceptions →</button>
                 </section>
-
                 <section className="panel">
                   <div className="panel-head"><h3>Recent activity</h3></div>
                   {audit.slice(0, 3).map((a, i) => (
@@ -608,19 +676,19 @@ export default function App() {
               {wizardStep === 2 && (
                 <div className="panel wizard-panel"><h3>Step 2 — Ready to reconcile?</h3><p>Match by reference, then Gross − Fee = Net.</p>
                   {reconError && <p className="error">{reconError}</p>}
-                  <div className="wizard-actions"><button className="secondary-btn" onClick={() => setWizardStep(1)}>← Back</button><button className="primary-btn" onClick={runReconciliation} disabled={reconLoading}>{reconLoading ? "Reconciling..." : "▶ Run Reconciliation"}</button></div>
+                  <div className="wizard-actions"><button className="secondary-btn" onClick={() => setWizardStep(1)}>← Back</button><button className="primary-btn" onClick={runReconciliation} disabled={reconLoading}>{reconLoading ? "Reconciling..." : "Run Reconciliation"}</button></div>
                 </div>
               )}
               {wizardStep === 3 && recon && (
                 <>
-                  <div className="panel wizard-panel"><h3>✅ Run Complete — {recon.run_id}</h3>
+                  <div className="panel wizard-panel"><h3>Run Complete — {recon.run_id}</h3>
                     <div className="cards">
                       <div className="card"><span>TOTAL</span><strong>{fmtInt(recon.total)}</strong><small>Checked</small></div>
                       <div className="card"><span>MATCHED</span><strong>{fmtInt(recon.matched)}</strong><small>Clean</small></div>
                       <div className="card"><span>EXCEPTIONS</span><strong>{fmtInt(recon.exceptions_count)}</strong><small>Needs investigation</small></div>
                       <div className="card"><span>RATE</span><strong>{n(recon.rate)}%</strong><small>Matched rate</small></div>
                     </div>
-                    <div className="wizard-actions"><button className="secondary-btn" onClick={() => { setWizardStep(1); setRecon(null); }}>↺ New Run</button><button className="primary-btn" onClick={() => setPage("exceptions")}>View Exceptions →</button></div>
+                    <div className="wizard-actions"><button className="secondary-btn" onClick={() => { setWizardStep(1); setRecon(null); }}>New Run</button><button className="primary-btn" onClick={() => setPage("exceptions")}>View Exceptions →</button></div>
                   </div>
                   <div className="panel"><h3>Exceptions ({fmtInt(recon.exceptions_count)})</h3>{asArray<Exc>(recon.exceptions).map((e) => (<div className="row" key={e.id}><div><strong>{e.type}</strong> · {e.id}<br /><small>{e.detail}</small></div><strong>{fmt(e.amount)}</strong></div>))}</div>
                 </>
@@ -630,7 +698,7 @@ export default function App() {
 
           {page === "exceptions" && (
             <>
-              <p className="hero-sub">Resolution Queue — click an exception to investigate. We never call it fraud — only &quot;needs investigation&quot;.</p>
+              <p className="hero-sub">Resolution Queue — click an exception to investigate. We never call it fraud — only needs investigation.</p>
               <section className="cards">
                 <div className="card"><span>OPEN</span><strong>{fmtInt(openExceptions.length)}</strong><small>Needs investigation</small></div>
                 <div className="card"><span>RESOLVED THIS SESSION</span><strong>{fmtInt(resolvedList.length)}</strong><small>Audit logged</small></div>
@@ -660,13 +728,13 @@ export default function App() {
                       <p><strong>Transaction:</strong> {selectedExc.txn}<br /><strong>Reference:</strong> {selectedExc.reference}<br /><strong>Amount:</strong> {fmt(selectedExc.amount)}</p>
                       <p className="evidence"><strong>Evidence:</strong><br />{selectedExc.detail}</p>
                       {resolvedIds.has(selectedExc.id)
-                        ? <p className="success-box">✅ Already resolved in this session. See Audit Trail below.</p>
+                        ? <p className="success-box">Already resolved in this session. See Audit Trail below.</p>
                         : <>
                           <label className="field">Assign to<select value={assignee} onChange={(e) => setAssignee(e.target.value)}><option>Ahmad Magaji</option><option>Fatima Yusuf</option><option>Musa Ibrahim</option></select></label>
                           <label className="field">Resolution reason<select value={reason} onChange={(e) => setReason(e.target.value)}>{RESOLVE_REASONS.map((r) => <option key={r}>{r}</option>)}</select></label>
                           <label className="field">Note (optional)<textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Called provider, confirmed settlement lands tomorrow..." rows={3} /></label>
                           {resolveMsg && <p className="success-box">{resolveMsg}</p>}
-                          <button className="primary-btn full" onClick={resolveSelected}>✓ Confirm Resolution</button>
+                          <button className="primary-btn full" onClick={resolveSelected}>Confirm Resolution</button>
                           <p className="note">Resolving does not move money. It only records your decision + audit trail.</p>
                         </>}
                     </>
@@ -685,16 +753,16 @@ export default function App() {
                   <div className="panel int-card" key={it.name}>
                     <div className="int-head"><span className="int-dot" style={{ background: it.color }}>{it.name[0]}</span><div><strong>{it.name}</strong><br /><small>{it.desc}</small></div></div>
                     <span className={it.status.includes("Available") ? "st matched" : "st warn"}>{it.status}</span>
-                    <button className="secondary-btn" disabled={!it.status.includes("Available")}>{it.status.includes("Available") ? "Works today — see Export below ↓" : "Coming soon — use CSV for now"}</button>
+                    <button className="secondary-btn" disabled={!it.status.includes("Available")}>{it.status.includes("Available") ? "Works today — see Export below" : "Coming soon — use CSV for now"}</button>
                   </div>
                 ))}
               </div>
               <div className="panel" style={{ marginTop: 16 }}>
-                <h3>📊 Google Sheets Export</h3>
+                <h3>Google Sheets Export</h3>
                 <p>Download any dataset as CSV, then in Google Sheets: <strong>File → Import → Upload</strong>.</p>
                 <div className="filters">
                   <label>Dataset<select value={exportDataset} onChange={(e) => setExportDataset(e.target.value)}><option>Transactions</option><option>Settlements</option><option>Exceptions</option></select></label>
-                  <button className="primary-btn" style={{ marginTop: 0 }} onClick={() => downloadCSV()}>⬇ Download {exportDataset} CSV</button>
+                  <button className="primary-btn" style={{ marginTop: 0 }} onClick={() => downloadCSV()}>Download {exportDataset} CSV</button>
                 </div>
                 {exportMsg && <p className="success-box">{exportMsg}</p>}
               </div>
@@ -706,7 +774,7 @@ export default function App() {
               <p className="hero-sub">Share a clean summary with your accountant or boss — no raw CSV digging.</p>
               <div className="filters">
                 <label>Period<select value={reportPeriod} onChange={(e) => setReportPeriod(e.target.value)}><option>This week</option><option>This month</option><option>Last month</option><option>All time</option></select></label>
-                <button className="primary-btn" style={{ marginTop: 0 }} onClick={downloadReport}>⬇ Download Report CSV</button>
+                <button className="primary-btn" style={{ marginTop: 0 }} onClick={downloadReport}>Download Report CSV</button>
               </div>
               {reportMsg && <p className="success-box">{reportMsg}</p>}
               <div className="panel">
@@ -721,11 +789,11 @@ export default function App() {
                 <h4>By Exception Type</h4>
                 {asArray<BreakdownItem>(overview.breakdown).map((b) => (<div className="row" key={b.label}><div><strong>{b.label}</strong> <span>· {fmtInt(b.count)} · {b.pct}</span></div><strong>{fmt(b.amount)}</strong></div>))}
                 <h4>What this means</h4>
-                <p>If Collected ≠ Received, the difference is in Exceptions. Resolve each exception with a reason + note, and the Audit Trail proves what you did. No mismatch is called fraud — only &quot;needs investigation&quot;.</p>
+                <p>If Collected ≠ Received, the difference is in Exceptions. Resolve each exception with a reason + note, and the Audit Trail proves what you did. No mismatch is called fraud — only needs investigation.</p>
                 <div className="wizard-actions">
-                  <button className="secondary-btn" onClick={() => downloadCSV("Exceptions")}>⬇ Export Exceptions</button>
-                  <button className="secondary-btn" onClick={() => downloadCSV("Transactions")}>⬇ Export Transactions</button>
-                  <button className="primary-btn" onClick={downloadReport}>⬇ Download Full Report</button>
+                  <button className="secondary-btn" onClick={() => downloadCSV("Exceptions")}>Export Exceptions</button>
+                  <button className="secondary-btn" onClick={() => downloadCSV("Transactions")}>Export Transactions</button>
+                  <button className="primary-btn" onClick={downloadReport}>Download Full Report</button>
                 </div>
               </div>
               <div className="panel" style={{ marginTop: 16 }}>
@@ -749,7 +817,7 @@ export default function App() {
                 <h3>Matching Rules</h3>
                 <label className="field">Amount tolerance (₦) — differences smaller than this are treated as Matched<input type="number" value={tolerance} onChange={(e) => setTolerance(e.target.value)} placeholder="0" /></label>
                 <label className="field">Date tolerance (days) — settlement can land this many days after sale and still match<select value={dateTolerance} onChange={(e) => setDateTolerance(e.target.value)}><option>0</option><option>1</option><option>2</option><option>3</option><option>7</option></select></label>
-                <p className="note">Recommended for Nigeria: Amount tolerance <strong>₦0</strong> (exact kobo math), Date tolerance <strong>1 day</strong> (T+1 settlement). Changing these does not change past runs — it applies to your next run.</p>
+                <p className="note">Recommended for Nigeria: Amount tolerance <strong>₦0</strong> (exact kobo math), Date tolerance <strong>1 day</strong> (T+1 settlement).</p>
               </div>
               <div className="panel" style={{ marginTop: 16 }}>
                 <h3>Notifications</h3>
@@ -758,11 +826,11 @@ export default function App() {
                 <p className="note">Demo: notifications are not actually sent yet. In production this uses email / WhatsApp.</p>
               </div>
               <div className="panel" style={{ marginTop: 16 }}>
-                <h3>🔑 Change Password</h3>
+                <h3>Change Password</h3>
                 <p><strong>{user?.name || "Ahmad Magaji"}</strong><br /><small>{user?.business || "Demo Commerce Ltd"} · {user?.email || "ahmad@demo.com"}</small></p>
                 <label className="field">Current password<input type="password" value={currentPw} onChange={(e) => setCurrentPw(e.target.value)} placeholder="Your current password" /></label>
                 <label className="field">New password (at least 6 characters)<input type="password" value={newPw} onChange={(e) => setNewPw(e.target.value)} placeholder="New password" /></label>
-                {pwMsg && <p className={pwMsg.startsWith("✅") ? "success-box" : "error"}>{pwMsg}</p>}
+                {pwMsg && <p className={pwMsg.startsWith("Password") ? "success-box" : "error"}>{pwMsg}</p>}
                 <button className="primary-btn" onClick={handleChangePassword}>Change Password</button>
                 <p className="note">Forgot your password? Log out, then on Log in click <b>Forgot password?</b> — demo reset is 123456.</p>
               </div>
@@ -770,8 +838,8 @@ export default function App() {
                 <h3>Your Account</h3>
                 <p><strong>{user?.name || "Ahmad Magaji"}</strong><br /><small>{user?.business || "Demo Commerce Ltd"} · {user?.email || "ahmad@demo.com"}</small></p>
                 <p className="note">Ledgerwatch never asks for your bank login. It only reads CSVs / provider reports you upload. It never moves money.</p>
-                <button className="primary-btn" onClick={saveSettings}>💾 Save Settings</button>
-                <button className="secondary-btn" onClick={logout} style={{ marginLeft: 10 }}>🚪 Log out</button>
+                <button className="primary-btn" onClick={saveSettings}>Save Settings</button>
+                <button className="secondary-btn" onClick={logout} style={{ marginLeft: 10 }}>Log out</button>
               </div>
             </>
           )}
