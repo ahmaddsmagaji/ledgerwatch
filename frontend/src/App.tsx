@@ -352,7 +352,7 @@ export default function App() {
   if (view === "landing") {
     return (
       <div style={{ fontFamily: "system-ui, sans-serif", color: "#0f172a", background: "#fff", minHeight: "100vh" }}>
-        <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 24px", maxWidth: 1120, margin: "0 auto" }}>
+        <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 24px", maxWidth: 1120, flexWrap: "wrap", gap: 12, margin: "0 auto" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}><LogoImg size={44} radius={12} /><div><div style={{ fontWeight: 900, fontSize: 23, lineHeight: 1 }}>Ledgerwatch</div><div style={{ fontSize: 10, color: PURPLE, fontWeight: 800, letterSpacing: 1.2 }}>RECONCILE • PROVE • RESOLVE</div></div></div>
           <div style={{ display: "flex", gap: 10 }}>
             {user ? (
@@ -366,10 +366,10 @@ export default function App() {
           </div>
         </header>
         <section style={{ background: `linear-gradient(135deg, ${PURPLE_DARK} 0%, ${PURPLE} 55%, ${PURPLE2} 100%)`, color: "#fff" }}>
-          <div style={{ maxWidth: 1120, margin: "0 auto", padding: "52px 24px 56px", display: "grid", gridTemplateColumns: "1.15fr 0.85fr", gap: 32, alignItems: "center" }}>
+          <div style={{ maxWidth: 1120, margin: "0 auto", padding: "clamp(28px, 5vw, 52px) 20px clamp(28px, 5vw, 56px)", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 32, alignItems: "center" }}>
             <div>
               <div style={{ display: "inline-block", background: "rgba(255,255,255,0.16)", border: "1px solid rgba(255,255,255,0.25)", padding: "6px 12px", borderRadius: 999, fontSize: 12, fontWeight: 800, letterSpacing: 1 }}>PAYMENT SETTLEMENT RECONCILIATION • FOR NIGERIAN BUSINESSES</div>
-              <h1 style={{ fontSize: 54, lineHeight: 1.02, letterSpacing: -1.5, margin: "18px 0 14px" }}>Know what you earned.<br />Find what hasn&apos;t arrived.</h1>
+              <h1 style={{ fontSize: "clamp(32px, 6vw, 54px)", lineHeight: 1.02, letterSpacing: -1.5, margin: "18px 0 14px" }}>Know what you earned.<br />Find what hasn&apos;t arrived.</h1>
               <p style={{ fontSize: 18, color: "#e9d5ff", lineHeight: 1.65, maxWidth: 560 }}>Did the money you sold actually enter your bank? Ledgerwatch checks <b style={{ color: "#fff" }}>every order</b> against <b style={{ color: "#fff" }}>Monnify settlements</b> and <b style={{ color: "#fff" }}>bank deposits</b> — and shows you exactly what is missing, short, or charged wrong.</p>
               <div style={{ display: "flex", gap: 12, marginTop: 26, flexWrap: "wrap" }}>
                 <button onClick={() => openAuth("signup")} style={{ padding: "14px 24px", borderRadius: 12, border: "none", background: "#fff", color: PURPLE_DARK, fontWeight: 900, fontSize: 16, cursor: "pointer" }}>Book a Demo →</button>
@@ -379,7 +379,7 @@ export default function App() {
             </div>
             <div style={{ background: "#fff", color: "#0f172a", borderRadius: 20, padding: 24, boxShadow: "0 24px 60px rgba(0,0,0,0.3)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><b>LIVE EXAMPLE</b><span style={{ background: "#fef3c7", color: "#92400e", padding: "4px 10px", borderRadius: 999, fontSize: 12, fontWeight: 800 }}>Needs investigation</span></div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 18 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12, marginTop: 18 }}>
                 <div style={{ background: "#f8fafc", borderRadius: 12, padding: 14 }}><div style={{ fontSize: 11, color: "#64748b", fontWeight: 700 }}>EXPECTED SETTLEMENT</div><div style={{ fontSize: 22, fontWeight: 900 }}>₦98,500</div><div style={{ fontSize: 12, color: "#64748b" }}>What Monnify should send</div></div>
                 <div style={{ background: "#f8fafc", borderRadius: 12, padding: 14 }}><div style={{ fontSize: 11, color: "#64748b", fontWeight: 700 }}>BANK DEPOSIT</div><div style={{ fontSize: 22, fontWeight: 900 }}>₦96,500</div><div style={{ fontSize: 12, color: "#64748b" }}>What actually hit bank</div></div>
               </div>
@@ -412,7 +412,7 @@ export default function App() {
           </div>
         </section>
         <section style={{ maxWidth: 1120, margin: "0 auto", padding: "48px 24px 60px" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
             <div style={{ border: `2px solid ${PURPLE}`, borderRadius: 16, padding: 22 }}><h3 style={{ margin: "0 0 10px" }}>✅ Who it&apos;s for</h3><ul style={{ color: "#475569", lineHeight: 1.8, margin: 0, paddingLeft: 18 }}><li>E-commerce stores using Monnify + POS</li><li>Shops with many daily sales to reconcile</li><li>Businesses tired of manual Excel reconciliation</li><li>Owners who want proof for their accountant</li></ul></div>
             <div style={{ border: "1px solid #e2e8f0", borderRadius: 16, padding: 22 }}><h3 style={{ margin: "0 0 10px" }}>❌ What it&apos;s NOT</h3><ul style={{ color: "#475569", lineHeight: 1.8, margin: 0, paddingLeft: 18 }}><li>Not a payment gateway — we don&apos;t collect money</li><li>Not a bank — we never ask for bank login</li><li>Not an accounting clone — we do one thing: reconciliation</li><li>We never call a mismatch &quot;fraud&quot; — only &quot;needs investigation&quot;</li></ul></div>
           </div>
