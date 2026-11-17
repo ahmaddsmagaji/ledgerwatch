@@ -56,12 +56,10 @@ function getSession(): User | null {
   try { return JSON.parse(localStorage.getItem("lw_session") || "null"); } catch { return null; }
 }
 
-// ---------- GOOGLE G ICON - REAL COLOURFUL G ----------[STRIPPED 51 bytes]"18" height="18" viewBox="0 0 48 48" style={{ flexShrink: 0 }}>
-      <path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.5 6.1 29.5 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.6-.4-3.9z" />
-      <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 18.9 12 24 12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.5 6.1 29.5 4 24 4 16.3 4 9.7 8.3 6.3 14.7z" />
-      <path fill="#4CAF50" d="M24 44c5.4 0 10.3-2.1 13.9-5.5l-6.4-5.4C29.4 34.6 26.8 35.5 24 35.5c-5.1 0-9.5-3.2-11.1-7.7l-6.5 5C9.6 39.6 16.2 44 24 44z" />
-      <path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.4-2.3 4.4-4.4 5.8l6.4 5.4C41.2 35.8 44 30.3 44 24c0-1.3-.1-2.6-.4-3.9z" />
-    </svg>
+// ---------- GOOGLE G ICON - SIMPLE, NO SVG, CANNOT BREAK ----------
+function GoogleIcon() {
+  return (
+    <span style={{ width: 18, height: 18, borderRadius: "50%", background: "#fff", border: "1px solid #e2e8f0", display: "inline-flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 13, color: "#4285F4", flexShrink: 0 }}>G</span>
   );
 }
 
@@ -357,8 +355,14 @@ export default function App() {
         <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 24px", maxWidth: 1120, margin: "0 auto" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}><LogoImg size={44} radius={12} /><div><div style={{ fontWeight: 900, fontSize: 23, lineHeight: 1 }}>Ledgerwatch</div><div style={{ fontSize: 10, color: PURPLE, fontWeight: 800, letterSpacing: 1.2 }}>RECONCILE • PROVE • RESOLVE</div></div></div>
           <div style={{ display: "flex", gap: 10 }}>
-            <button onClick={() => openAuth("login")} style={{ padding: "10px 18px", borderRadius: 999, border: "1px solid #e2e8f0", background: "#fff", fontWeight: 700, cursor: "pointer" }}>Log in</button>
-            <button onClick={() => openAuth("signup")} style={{ padding: "10px 18px", borderRadius: 999, border: "none", background: PURPLE, color: "#fff", fontWeight: 800, cursor: "pointer" }}>Create account</button>
+            {user ? (
+              <button onClick={() => setView("app")} style={{ padding: "10px 18px", borderRadius: 999, border: "none", background: PURPLE, color: "#fff", fontWeight: 800, cursor: "pointer" }}>← Back to App ({user.name})</button>
+            ) : (
+              <>
+                <button onClick={() => openAuth("login")} style={{ padding: "10px 18px", borderRadius: 999, border: "1px solid #e2e8f0", background: "#fff", fontWeight: 700, cursor: "pointer" }}>Log in</button>
+                <button onClick={() => openAuth("signup")} style={{ padding: "10px 18px", borderRadius: 999, border: "none", background: PURPLE, color: "#fff", fontWeight: 800, cursor: "pointer" }}>Create account</button>
+              </>
+            )}
           </div>
         </header>
         <section style={{ background: `linear-gradient(135deg, ${PURPLE_DARK} 0%, ${PURPLE} 55%, ${PURPLE2} 100%)`, color: "#fff" }}>
@@ -393,7 +397,7 @@ export default function App() {
               { e: "📦", t: "Orders", d: "What your system says you sold — every order, reference, customer, amount." },
               { e: "💳", t: "Settlements", d: "What Monnify / Paystack / Flutterwave says they sent — Gross − Fee = Net." },
               { e: "🏦", t: "Bank Deposits", d: "What actually hit your bank — the only number that pays your bills." },
-              { e: "⚠️", t: "Exceptions", d: "Only the breaks. Missing, mismatch, duplicate, fee error, orphan credit, timing break." },
+              { e: "⚠", t: "Exceptions", d: "Only the breaks. Missing, mismatch, duplicate, fee error, orphan credit, timing break." },
             ].map((c) => (<div key={c.t} style={{ border: "1px solid #e2e8f0", borderRadius: 16, padding: 20 }}><div style={{ fontSize: 28 }}>{c.e}</div><div style={{ fontWeight: 800, margin: "8px 0 6px" }}>{c.t}</div><div style={{ color: "#475569", fontSize: 14, lineHeight: 1.6 }}>{c.d}</div></div>))}
           </div>
         </section>
@@ -476,7 +480,12 @@ export default function App() {
           <button key={m.id} className={`nav-item ${page === m.id ? "active" : ""}`} onClick={() => { setPage(m.id); setSidebarOpen(false); setSearch(""); setStatusFilter("All"); setChannelFilter("All"); setShowAccountMenu(false); }}>
             <span className="nav-icon">{m.icon}</span> {m.label}{m.id === "exceptions" && <span className="badge">{openExceptions.length}</span>}
           </button>))}</nav>
-        <div className="sidebar-footer"><p>Sync. Reconcile. Resolve.</p><small>Ledgerwatch does not move money.</small></div>
+        <div className="sidebar-footer">
+          <p>Sync. Reconcile. Resolve.</p>
+          <small>Ledgerwatch does not move money.</small>
+          <button onClick={() => setView("landing")} style={{ marginTop: 10, width: "100%", background: "transparent", border: "1px solid rgba(255,255,255,0.4)", borderRadius: 999, padding: "10px 12px", cursor: "pointer", fontWeight: 800, color: "#fff" }}>🏠 View Landing Page</button>
+          <button onClick={logout} style={{ marginTop: 8, width: "100%", background: "#ffffff", border: "none", borderRadius: 999, padding: "10px 12px", cursor: "pointer", fontWeight: 800, fontSize: 14, color: "#2E1065" }}>🚪 Log out</button>
+        </div>
       </aside>
       {sidebarOpen && <div className="overlay" onClick={() => setSidebarOpen(false)} />}
 
