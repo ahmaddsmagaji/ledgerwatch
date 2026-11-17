@@ -126,7 +126,7 @@ export default function App() {
   const [reportPeriod, setReportPeriod] = useState("This week");
   const [reportMsg, setReportMsg] = useState("");
   const [selectedPlan, setSelectedPlan] = useState("Growth");
-  const [currentPlan, setCurrentPlan] = useState("Free Trial");
+  const [currentPlan] = useState("Free Trial");
   const [billingMsg, setBillingMsg] = useState("");
   const [billingError, setBillingError] = useState("");
   const [billingLoading, setBillingLoading] = useState(false);
