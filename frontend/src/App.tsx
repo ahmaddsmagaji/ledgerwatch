@@ -4,7 +4,7 @@ import "./App.css";
 const API_URL = "https://ledgerwatch-backend-v2.onrender.com";
 
 const PURPLE = "#5B0DBA";
-const PURPLE2 = "#7C3AED";
+const PURPLE2 = "#7C3AED"; // used in landing gradient
 const PURPLE_DARK = "#2E1065";
 const LOGO = "/brand/logo.png";
 
@@ -398,7 +398,7 @@ export default function App() {
 
         <section style={{ background: "#fff", color: "#0f172a" }}>
           <div style={{ maxWidth: 760, margin: "0 auto", padding: "clamp(36px, 6vw, 64px) 20px 28px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
-            <div style={{ display: "inline-block", background: "#f5f3ff", border: "1px solid #e9d5ff", padding: "6px 12px", borderRadius: 999, fontSize: 12, fontWeight: 800, letterSpacing: 1, color: PURPLE }}>PAYMENT SETTLEMENT RECONCILIATION • FOR NIGERIAN BUSINESSES</div>
+            <div style={{ display: "inline-block", background: "#f5f3ff", border: "1px solid #e9d5ff", color: PURPLE2, padding: "6px 12px", borderRadius: 999, fontSize: 12, fontWeight: 800, letterSpacing: 1, color: PURPLE }}>PAYMENT SETTLEMENT RECONCILIATION • FOR NIGERIAN BUSINESSES</div>
             <h1 style={{ fontSize: "clamp(36px, 8vw, 56px)", lineHeight: 1.05, letterSpacing: -1.5, margin: "18px 0 14px", color: "#0f172a", textAlign: "center" }}>Know what you earned.<br />Find what hasn&apos;t arrived.</h1>
             <p style={{ fontSize: 18, color: "#475569", lineHeight: 1.7, maxWidth: 620, textAlign: "center" }}>Did the money you sold actually enter your bank? Ledgerwatch checks <b>every order</b> against <b>Monnify settlements</b> and <b>bank deposits</b> — and shows you exactly what is missing, short, or charged wrong.</p>
             <div style={{ display: "flex", gap: 12, marginTop: 26, flexWrap: "wrap", justifyContent: "center", width: "100%" }}>
