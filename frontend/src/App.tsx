@@ -127,13 +127,9 @@ export default function App() {
   const [reportMsg, setReportMsg] = useState("");
   const [selectedPlan, setSelectedPlan] = useState("Growth");
   const [currentPlan, setCurrentPlan] = useState("Free Trial");
-  const [cardName, setCardName] = useState("");
-  const [cardNumber, setCardNumber] = useState("");
-  const [cardExpiry, setCardExpiry] = useState("");
-  const [cardCvc, setCardCvc] = useState("");
-  const [savedCard, setSavedCard] = useState(() => localStorage.getItem("lw_card") || "");
   const [billingMsg, setBillingMsg] = useState("");
   const [billingError, setBillingError] = useState("");
+  const [billingLoading, setBillingLoading] = useState(false);
   const [waNumber, setWaNumber] = useState(() => localStorage.getItem("lw_wa_number") || "");
   const [waCode, setWaCode] = useState("");
   const [waGenerated, setWaGenerated] = useState("");
@@ -236,15 +232,17 @@ export default function App() {
     } else setWaMsg("Wrong code. Tap Generate code again.");
   };
   const unlinkWa = () => { setWaLinked(false); localStorage.removeItem("lw_wa_linked"); setWaGenerated(""); setWaCode(""); setWaMsg("WhatsApp unlinked."); };
-  const saveCard = (e: React.FormEvent) => {
-    e.preventDefault();
-    const digits = cardNumber.replace(/\D/g, "");
-    if (digits.length < 15 || !cardName.trim() || cardExpiry.length < 5 || cardCvc.length < 3) { setBillingError("Fill name, 16-digit card, MM/YY, CVC."); return; }
-    const last4 = digits.slice(-4); localStorage.setItem("lw_card", `•••• ${last4}`); setSavedCard(`•••• ${last4}`); setBillingError(""); setBillingMsg(`Card saved — ending ${last4}. Demo only.`);
-  };
-  const subscribe = () => {
-    if (!savedCard) { setBillingError("Add card first."); return; }
-    setCurrentPlan(selectedPlan); setBillingError(""); setBillingMsg(`Subscribed to ${selectedPlan} — ${fmt(PLANS.find((p) => p.name === selectedPlan)?.price)} / month`);
+  const subscribe = async () => {
+    setBillingError(""); setBillingMsg(""); setBillingLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/billing/initialize`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ plan: selectedPlan, email: user?.email || "" }) });
+      const data = await res.json().catch(() => ({}));
+      if (data?.authorization_url) { window.location.href = data.authorization_url; return; }
+      if (data?.note) { setBillingMsg(`Paystack is not connected yet (backend Stage 1). Plan selected: ${selectedPlan} — ${fmt(PLANS.find((p) => p.name === selectedPlan)?.price)} / month. Add PAYSTACK_SECRET_KEY on Render to enable live checkout.`); return; }
+      throw new Error("no-url");
+    } catch {
+      setBillingError("Paystack checkout is not enabled yet. Add PAYSTACK_SECRET_KEY in Render → Environment, then try again. No card was collected on Ledgerwatch.");
+    } finally { setBillingLoading(false); }
   };
   const loadAdminUsers = () => { setAdminUsers(getUsers()); };
   const adminResetPw = (email: string) => {
@@ -451,7 +449,7 @@ export default function App() {
         <div className="sidebar-brand"><div className="logo-wrap"><span className="logo-fallback">L</span><img src={LOGO} alt="Ledgerwatch" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} /></div><div><strong>Ledgerwatch</strong><small>{workspaceName}</small></div><button className="close-btn" onClick={() => setSidebarOpen(false)}>X</button></div>
         <p className="menu-title">MENU</p>
         <nav>{menu.map((m) => (<button key={m.id} className={`nav-item ${page === m.id ? "active" : ""}`} onClick={() => { setPage(m.id); setSidebarOpen(false); setSearch(""); setStatusFilter("All"); setChannelFilter("All"); setShowAccountMenu(false); }}><span className="nav-icon">{m.icon}</span> {m.label}{m.id === "exceptions" && <span className="badge">{openExceptions.length}</span>}</button>))}</nav>
-        <div className="sidebar-footer"><p>Sync. Reconcile. Resolve.</p><small>Ledgerwatch does not move money.</small><button onClick={() => setView("landing")} style={{ marginTop: 10, width: "100%", background: "transparent", border: "1px solid rgba(255,255,255,0.4)", borderRadius: 999, padding: "10px 12px", cursor: "pointer", fontWeight: 800, color: "#fff" }}>View Landing Page</button><button onClick={logout} style={{ marginTop: 8, width: "100%", background: "#ffffff", border: "none", borderRadius: 999, padding: "10px 12px", cursor: "pointer", fontWeight: 800, fontSize: 14, color: "#2E1065" }}>Log out</button></div>
+        <div className="sidebar-footer"><p>Sync. Reconcile. Resolve.</p><small>Ledgerwatch does not move money.</small><button onClick={logout} style={{ marginTop: 12, width: "100%", background: "#ffffff", border: "none", borderRadius: 999, padding: "10px 12px", cursor: "pointer", fontWeight: 800, fontSize: 14, color: "#2E1065" }}>Log out</button><button onClick={() => setView("landing")} style={{ marginTop: 10, width: "100%", background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "#C4B5FD", textDecoration: "underline" }}>← Back to website</button></div>
       </aside>
       {sidebarOpen && <div className="overlay" onClick={() => setSidebarOpen(false)} />}
       <div className="main">
@@ -563,7 +561,7 @@ export default function App() {
               <div className="panel" style={{ marginTop: 16 }}><h3>MATCHING RULES</h3><label className="field">Amount tolerance (₦)<input type="number" value={tolerance} onChange={(e) => setTolerance(e.target.value)} placeholder="0" /></label><label className="field">Date tolerance (days)<select value={dateTolerance} onChange={(e) => setDateTolerance(e.target.value)}><option>0</option><option>1</option><option>2</option><option>3</option><option>7</option></select></label><p className="note">Recommended: Amount ₦0 (exact kobo), Date 1 day (T+1 settlement).</p><label className="check"><input type="checkbox" checked={notifyEmail} onChange={(e) => setNotifyEmail(e.target.checked)} /> Email me a daily summary</label><label className="check"><input type="checkbox" checked={notifyNewExc} onChange={(e) => setNotifyNewExc(e.target.checked)} /> Alert me when a new exception appears</label><button className="primary-btn" onClick={saveSettings}>Save Settings</button></div>
               <div className="panel" style={{ marginTop: 16 }}><h3>BILLING</h3><p className="note">Review your current plan, subscription status, and upgrade options.</p><div style={{ display: "flex", justifyContent: "space-between", marginTop: 10 }}><div><div style={{ fontSize: 11, color: "#667085" }}>CURRENT PLAN</div><b style={{ fontSize: 20 }}>{currentPlan}</b></div><span style={{ background: "#ECFDF3", color: "#067647", padding: "4px 10px", borderRadius: 999, fontSize: 12, height: 24 }}>● Active</span></div>{billingMsg && <div style={{ color: "#067647", fontSize: 13, marginTop: 10 }}>{billingMsg}</div>}{billingError && <div style={{ color: "#B42318", fontSize: 13 }}>{billingError}</div>}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 12, marginTop: 14 }}>{PLANS.map((p) => (<div key={p.name} style={{ border: selectedPlan === p.name ? `2px solid ${PURPLE}` : "1px solid #D0D5DD", borderRadius: 12, padding: 14 }}><b>{p.name}</b><div style={{ fontSize: 20, fontWeight: 900 }}>{fmt(p.price)} <span style={{ fontSize: 12, color: "#667085" }}>/ month</span></div><div style={{ fontSize: 12, color: "#667085" }}>{p.desc}</div><button onClick={() => setSelectedPlan(p.name)} style={{ width: "100%", marginTop: 10, padding: 10, borderRadius: 10, border: selectedPlan === p.name ? "none" : "1px solid #D0D5DD", background: selectedPlan === p.name ? PURPLE : "#fff", color: selectedPlan === p.name ? "#fff" : "#131118", fontWeight: 700, cursor: "pointer" }}>{selectedPlan === p.name ? "Selected ✓" : "Select"}</button></div>))}</div>
-                <div style={{ marginTop: 16, borderTop: "1px solid #EAECF0", paddingTop: 14 }}><b>Secure billing</b><p className="note">Billing is handled securely by Paystack. Ledgerwatch does not store your card details. Subscriptions renew automatically and can be cancelled from your Paystack account.</p>{savedCard ? <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}><span style={{ padding: "10px 14px", borderRadius: 10, border: "1px solid #D0D5DD" }}>Card {savedCard}</span><button onClick={subscribe} className="primary-btn">Subscribe to {selectedPlan}</button><button onClick={() => { setSavedCard(""); localStorage.removeItem("lw_card"); }} className="secondary-btn">Remove</button></div> : <form onSubmit={saveCard} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 10, marginTop: 12 }}><input value={cardName} onChange={(e) => setCardName(e.target.value)} placeholder="Name on card" style={{ padding: 11, borderRadius: 10, border: "1px solid #D0D5DD" }} /><input value={cardNumber} onChange={(e) => setCardNumber(e.target.value.replace(/\D/g, "").slice(0, 16))} placeholder="Card number" style={{ padding: 11, borderRadius: 10, border: "1px solid #D0D5DD" }} /><input value={cardExpiry} onChange={(e) => { let v = e.target.value.replace(/\D/g, "").slice(0, 4); if (v.length > 2) v = v.slice(0, 2) + "/" + v.slice(2); setCardExpiry(v); }} placeholder="MM/YY" style={{ padding: 11, borderRadius: 10, border: "1px solid #D0D5DD" }} /><input value={cardCvc} onChange={(e) => setCardCvc(e.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="CVC" style={{ padding: 11, borderRadius: 10, border: "1px solid #D0D5DD" }} /><button className="primary-btn">Add Card</button></form>}</div>
+                <div style={{ marginTop: 16, borderTop: "1px solid #EAECF0", paddingTop: 14 }}><b>Secure billing via Paystack</b><p className="note">You pay on Paystack&apos;s secure page — card, transfer or USSD. Ledgerwatch never sees or stores your card number. Subscriptions renew automatically and can be cancelled from your Paystack account.</p><button onClick={subscribe} className="primary-btn" disabled={billingLoading}>{billingLoading ? "Connecting to Paystack..." : `Subscribe to ${selectedPlan} — ${fmt(PLANS.find((p) => p.name === selectedPlan)?.price)} / month via Paystack →`}</button><p className="note">You will be redirected to Paystack to complete payment safely.</p></div>
               </div>
               <div className="panel" style={{ marginTop: 16 }}><h3>Change Password</h3><p><strong>{user?.name}</strong><br /><small>{user?.business} · {user?.email}</small></p><label className="field">Current password<input type="password" value={currentPw} onChange={(e) => setCurrentPw(e.target.value)} placeholder="Your current password" /></label><label className="field">New password (at least 6 characters)<input type="password" value={newPw} onChange={(e) => setNewPw(e.target.value)} placeholder="New password" /></label>{pwMsg && <p className={pwMsg.startsWith("Password") ? "success-box" : "error"}>{pwMsg}</p>}<button className="primary-btn" onClick={handleChangePassword}>Change Password</button></div>
               {isAdmin && (
