@@ -58,10 +58,16 @@ const asArray = <T,>(v: unknown): T[] => (Array.isArray(v) ? (v as T[]) : []);
 function getUsers(): Record<string, User & { password: string }> { try { return JSON.parse(localStorage.getItem("lw_users") || "{}"); } catch { return {}; } }
 function getSession(): User | null { try { return JSON.parse(localStorage.getItem("lw_session") || "null"); } catch { return null; } }
 function GoogleIcon() { return <span style={{ width: 18, height: 18, borderRadius: "50%", background: "#fff", border: "1px solid #e2e8f0", display: "inline-flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 13, color: "#4285F4", flexShrink: 0 }}>G</span>; }
-function LogoImg({ size = 40, radius = 10 }: { size?: number; radius?: number }) { return <div style={{ width: size, height: size, borderRadius: radius, overflow: "hidden", background: "#000", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", flexShrink: 0 }} onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
-                <img src={LOGO} alt="LedgerWatch" style={{ height: 40, width: 40, objectFit: "cover", borderRadius: 9, display: "block", flexShrink: 0 }} />
-                <span style={{ fontSize: 21, fontWeight: 800, letterSpacing: -0.5, color: "#1A1A1A", whiteSpace: "nowrap" }}>Ledgerwatch</span>
-              </span></div>; }
+
+// FIXED LOGO: single component, 40x40 icon + Ledger black / Watch purple. No nested divs, no black box.
+function LogoImg({ size = 40 }: { size?: number }) {
+  return (
+    <span className="lw-logo" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
+      <img src={LOGO} alt="LedgerWatch" style={{ height: size, width: size }} />
+      <span className="lw-wordmark">Ledger<span>Watch</span></span>
+    </span>
+  );
+}
 function mapSummary(s: any): OverviewData {
   if (!s || typeof s !== "object") return FALLBACK_OVERVIEW;
   const ordersTotal = n(s.orders_total ?? s.transactions);
@@ -342,32 +348,29 @@ export default function App() {
   if (view === "landing") {
     return (
       <div style={{ fontFamily: "Inter, system-ui, sans-serif", color: fg, background: bg, minHeight: "100vh" }}>
-        <header className="landing-header" style={{ background: cardBg }}>
-          <nav className="landing-nav-desktop" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", maxWidth: 1200, margin: "0 auto", padding: "12px 20px", boxSizing: "border-box" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 16, minWidth: 0 }}>
-              <button className="landing-hamburger lw-hamburger-always" onClick={() => setMobileMenu((v) => !v)} aria-label="Menu" style={{ fontSize: 24, background: "none", border: "none", cursor: "pointer", padding: "4px 8px" }}>{mobileMenu ? "X" : "☰"}</button>
-              <img src={LOGO} alt="LedgerWatch" style={{ height: 40, width: 40, objectFit: "cover", borderRadius: 9, display: "block", flexShrink: 0 }} /><span className="lw-wordmark">【entity-Ledger¦canonical_name=Ledger】<span>Watch</span></span>
-              <div className="landing-nav-links" style={{ display: "flex", alignItems: "center", gap: 20 }}>
-                <button onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })}>Features</button>
-                <button onClick={() => document.getElementById("how")?.scrollIntoView({ behavior: "smooth" })}>How it works</button>
-                <button onClick={() => document.getElementById("faq")?.scrollIntoView({ behavior: "smooth" })}>FAQ</button>
-              </div>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+        <header className="landing-header">
+          <div className="landing-header-inner">
+            <LogoImg size={40} />
+            <nav className="landing-nav-links">
+              <button onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })}>Features</button>
+              <button onClick={() => document.getElementById("how")?.scrollIntoView({ behavior: "smooth" })}>How it works</button>
+              <button onClick={() => document.getElementById("faq")?.scrollIntoView({ behavior: "smooth" })}>FAQ</button>
+            </nav>
+            <div className="landing-header-actions">
               <button onClick={() => setDarkMode((v) => !v)} className="pill-btn">{darkMode ? "Light" : "Dark"}</button>
               {user ? <button onClick={() => setView("app")} className="primary-pill">Back to App ({user.name})</button> : <><button onClick={() => openAuth("login")} className="pill-btn">Log In</button><button onClick={() => openAuth("signup")} className="primary-pill">Start Free</button></>}
+              <button className="landing-hamburger" onClick={() => setMobileMenu((v) => !v)} aria-label="Menu">{mobileMenu ? "✕" : "☰"}</button>
             </div>
-          </nav>
-        </header>
-        {mobileMenu && !user && (
-          <div className="landing-mobile-menu" style={{ background: cardBg }}>
-            <button onClick={() => { setMobileMenu(false); document.getElementById("features")?.scrollIntoView({ behavior: "smooth" }); }}>Features</button>
-            <button onClick={() => { setMobileMenu(false); document.getElementById("how")?.scrollIntoView({ behavior: "smooth" }); }}>How it works</button>
-            <button onClick={() => { setMobileMenu(false); document.getElementById("faq")?.scrollIntoView({ behavior: "smooth" }); }}>FAQ</button>
-            <button onClick={() => openAuth("login")} className="pill-btn">Log In</button>
-            <button onClick={() => openAuth("signup")} className="primary-pill">Start Free</button>
           </div>
-        )}
+          {mobileMenu && (
+            <div className="landing-mobile-menu">
+              <button onClick={() => { setMobileMenu(false); document.getElementById("features")?.scrollIntoView({ behavior: "smooth" }); }}>Features</button>
+              <button onClick={() => { setMobileMenu(false); document.getElementById("how")?.scrollIntoView({ behavior: "smooth" }); }}>How it works</button>
+              <button onClick={() => { setMobileMenu(false); document.getElementById("faq")?.scrollIntoView({ behavior: "smooth" }); }}>FAQ</button>
+              {!user && <><button onClick={() => openAuth("login")} className="pill-btn">Log In</button><button onClick={() => openAuth("signup")} className="primary-pill">Start Free</button></>}
+            </div>
+          )}
+        </header>
         <section style={{ background: bg, color: fg }}>
           <div className="landing-hero">
             <div style={{ display: "inline-block", background: darkMode ? "#1e1b4b" : "#f5f3ff", border: "1px solid #e9d5ff", padding: "6px 12px", borderRadius: 999, fontSize: 12, fontWeight: 800, letterSpacing: 1, color: PURPLE }}>PAYMENT SETTLEMENT RECONCILIATION • FOR NIGERIAN BUSINESSES</div>
@@ -430,9 +433,9 @@ export default function App() {
     return (
       <div style={{ fontFamily: "Inter, system-ui, sans-serif", minHeight: "100vh", background: "#F6F6F8", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
         <div style={{ background: "#fff", borderRadius: 20, padding: 32, width: "100%", maxWidth: 440, boxShadow: "0 10px 40px rgba(0,0,0,0.08)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}><LogoImg size={36} /><span style={{ fontWeight: 900, fontSize: 22 }}>Ledgerwatch</span></div>
-          <h2 style={{ margin: "12px 0 6px", fontSize: 26 }}>{authMode === "signup" ? "Create your account" : "Welcome back"}</h2>
-          <p style={{ color: "#667085", margin: "0 0 20px", fontSize: 14 }}>{authMode === "signup" ? "Your own workspace. Your data stays yours." : "Log in to your workspace."}</p>
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 4 }}><LogoImg size={36} /></div>
+          <h2 style={{ margin: "12px 0 6px", fontSize: 26, textAlign: "center" }}>{authMode === "signup" ? "Create your account" : "Welcome back"}</h2>
+          <p style={{ color: "#667085", margin: "0 0 20px", fontSize: 14, textAlign: "center" }}>{authMode === "signup" ? "Your own workspace. Your data stays yours." : "Log in to your workspace."}</p>
           <div style={{ display: "flex", background: "#f1f5f9", borderRadius: 999, padding: 4, marginBottom: 20 }}>
             {(["signup", "login"] as const).map((m) => (<button key={m} onClick={() => { setAuthMode(m); setAuthError(""); setShowForgot(false); }} style={{ flex: 1, padding: "10px", borderRadius: 999, border: "none", background: authMode === m ? "#fff" : "transparent", fontWeight: 700, cursor: "pointer" }}>{m === "signup" ? "Sign up" : "Log in"}</button>))}
           </div>
@@ -465,10 +468,10 @@ export default function App() {
   return (
     <div className="layout">
       <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
-        <div className="sidebar-brand"><div className="logo-wrap"><span className="logo-fallback">L</span><img src={LOGO} alt="Ledgerwatch" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} /></div><div><strong>Ledgerwatch</strong><small>{workspaceName}</small></div><button className="close-btn" onClick={() => setSidebarOpen(false)}>X</button></div>
+        <div className="sidebar-brand"><LogoImg size={36} /><div className="sidebar-workspace"><small>{workspaceName}</small></div><button className="close-btn" onClick={() => setSidebarOpen(false)}>✕</button></div>
         <p className="menu-title">MENU</p>
         <nav>{menu.filter((m) => m.id !== "admin" || isAdmin).map((m) => (<button key={m.id} className={`nav-item ${page === m.id ? "active" : ""}`} onClick={() => { setPage(m.id); setSidebarOpen(false); setSearch(""); setStatusFilter("All"); setChannelFilter("All"); setShowAccountMenu(false); }}><span className="nav-icon">{m.icon}</span> {m.label}{m.id === "exceptions" && <span className="badge">{openExceptions.length}</span>}</button>))}</nav>
-        <div className="sidebar-footer"><p>Sync. Reconcile. Resolve.</p><small>Ledgerwatch does not move money.</small><button onClick={logout} style={{ marginTop: 12, width: "100%", background: "#ffffff", border: "none", borderRadius: 999, padding: "10px 12px", cursor: "pointer", fontWeight: 800, fontSize: 14, color: "#2E1065" }}>Log out</button><button onClick={() => setView("landing")} style={{ marginTop: 10, width: "100%", background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "#C4B5FD", textDecoration: "underline" }}>← Back to website</button></div>
+        <div className="sidebar-footer"><small>Ledgerwatch does not move money.</small><button onClick={logout} className="sidebar-logout">Log out</button><button onClick={() => setView("landing")} className="sidebar-back">← Back to website</button></div>
       </aside>
       {sidebarOpen && <div className="overlay" onClick={() => setSidebarOpen(false)} />}
       <div className="main">
@@ -494,8 +497,9 @@ export default function App() {
         <main className="content">
           {page === "overview" && (
             <>
-              <div className="overview-header"><div><h2 className="overview-title">Overview</h2><p className="overview-subtitle">Payments, settlements and bank deposits — reconciled. {fmtInt(openExceptions.length)} open · {fmtInt(resolvedList.length)} resolved in this session</p></div>
+              <div className="overview-header"><div><h1 className="overview-title">Reconciliation overview</h1><p className="overview-subtitle">Know what settled, what is missing, and what needs review. {fmtInt(openExceptions.length)} open · {fmtInt(resolvedList.length)} resolved in this session</p></div>
                 <div className="overview-header-right"><label className="period-label">Period<select value={reportPeriod} onChange={(e) => setReportPeriod(e.target.value)}><option>This week</option><option>This month</option><option>Last month</option><option>All time</option></select></label></div></div>
+              <div className="overview-actions"><button className="primary-btn" onClick={() => setPage("reconciliation")}>Import transactions</button><button className="secondary-btn" onClick={() => setPage("reconciliation")}>View reconciliation</button></div>
               <section className="kpi-grid">
                 <div className="card kpi-card kpi-primary"><span>RECONCILIATION RATE</span><strong>{n(overview.reconciliation_rate)}%</strong><div className="kpi-progress"><span style={{ width: `${Math.min(100, Math.max(0, n(overview.reconciliation_rate)))}%` }} /></div><small>Matched vs flagged • {reportPeriod}</small></div>
                 <div className="card kpi-card"><span>TRANSACTION VALUE</span><strong>{fmt(overview.total_value)}</strong><small>{fmtInt(overview.transactions)} transactions</small></div>
@@ -503,10 +507,10 @@ export default function App() {
                 <div className="card kpi-card"><span>OPEN EXCEPTIONS</span><strong>{fmtInt(openExceptions.length)}</strong><small>Needs investigation</small></div>
               </section>
               <div className="overview-two-col">
-                <section className="panel"><div className="panel-head"><h3>Needs attention</h3><span className="count-badge">{fmtInt(openExceptions.length)} open</span></div>
-                  {openExceptions.length === 0 && <p className="empty">All clear — no open exceptions.</p>}
+                <section className="panel"><div className="panel-head"><h3>Exceptions requiring attention</h3><span className="count-badge">{fmtInt(openExceptions.length)} open</span></div>
+                  {openExceptions.length === 0 && <div className="empty"><h3>All clear</h3><p>No open exceptions. Import transactions to begin reconciliation.</p><button className="primary-btn" onClick={() => setPage("reconciliation")}>Import transactions</button></div>}
                   {openExceptions.slice(0, 3).map((e) => (<div className="row" key={e.id}><div><strong>{e.type}</strong> · {e.id}<br /><small>{e.txn} · {e.reference}</small></div><div style={{ textAlign: "right" }}><strong>{fmt(e.amount)}</strong><br /><button className="link-btn" onClick={() => { setSelectedExc(e); setPage("exceptions"); }}>View →</button></div></div>))}
-                  <button className="link-btn" onClick={() => setPage("exceptions")}>View all open exceptions →</button></section>
+                  {openExceptions.length > 0 && <button className="link-btn" onClick={() => setPage("exceptions")}>View all open exceptions →</button>}</section>
                 <section className="panel"><div className="panel-head"><h3>Recent activity</h3></div>
                   {audit.slice(0, 3).map((a, i) => (<div className="audit-row" key={i}><small>{a.time} · {a.by}</small><span>{a.action}</span></div>))}
                   <button className="link-btn" onClick={() => setPage("reports")}>View all activity →</button></section>
@@ -515,21 +519,24 @@ export default function App() {
           )}
           {page === "transactions" && (
             <>
+              <h1 className="page-h1">Transactions</h1>
               <p className="hero-sub">Internal records — what your system says you collected.</p>
               <div className="filters"><label>Status<select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}><option>All</option><option>Matched</option><option>Amount Mismatch</option><option>Missing Settlement</option><option>Duplicate</option><option>Timing Difference</option></select></label><label>Channel<select value={channelFilter} onChange={(e) => setChannelFilter(e.target.value)}><option>All</option><option>Paystack</option><option>Flutterwave</option><option>Monnify</option></select></label><button className="clear-btn" onClick={() => { setSearch(""); setStatusFilter("All"); setChannelFilter("All"); }}>Clear filters</button></div>
-              <div className="table-wrap"><table className="table"><thead><tr><th>Transaction</th><th>Customer</th><th>Date</th><th>Channel</th><th>Amount</th><th>Status</th></tr></thead><tbody>{filteredTxns.map((t) => (<tr key={t.id}><td><strong>{t.id}</strong><small>{t.reference}</small></td><td>{t.customer}</td><td>{t.date}</td><td>{t.channel}</td><td><strong>{fmt(t.amount)}</strong></td><td><span className={statusClass(t.status)}>{t.status}</span></td></tr>))}</tbody></table></div>
+              <div className="table-wrap"><table className="table"><thead><tr><th>Transaction</th><th>Customer</th><th>Date</th><th>Channel</th><th>Amount</th><th>Status</th></tr></thead><tbody>{filteredTxns.map((t) => (<tr key={t.id}><td><strong>{t.id}</strong><small>{t.reference}</small></td><td>{t.customer}</td><td>{t.date}</td><td>{t.channel}</td><td><strong>{fmt(t.amount)}</strong></td><td><span className={statusClass(t.status)}>{t.status}</span></td></tr>))}{filteredTxns.length === 0 && <tr><td colSpan={6} className="empty">No transactions imported yet. Import your transaction records to begin reconciliation.</td></tr>}</tbody></table></div>
             </>
           )}
           {page === "settlements" && (
             <>
+              <h1 className="page-h1">Settlements</h1>
               <p className="hero-sub">Provider payouts — what actually hit your bank. Formula: <strong>Gross − Fee = Net</strong>.</p>
               <section className="cards"><div className="card"><span>TOTAL GROSS</span><strong>{fmt(settleTotals.gross)}</strong><small>Before fees</small></div><div className="card"><span>TOTAL FEES</span><strong>{fmt(settleTotals.fee)}</strong><small>Provider charges</small></div><div className="card"><span>TOTAL NET</span><strong>{fmt(settleTotals.net)}</strong><small>Gross − Fee</small></div><div className="card"><span>SETTLEMENTS</span><strong>{fmtInt(filteredSettlements.length)}</strong><small>Filtered view</small></div></section>
-              <div className="table-wrap"><table className="table"><thead><tr><th>Settlement</th><th>Provider / Bank</th><th>Date</th><th>Gross</th><th>Fee</th><th>Net</th><th>Status</th></tr></thead><tbody>{filteredSettlements.map((s) => (<tr key={s.id}><td><strong>{s.id}</strong><small>{s.reference}</small></td><td>{s.provider}<small>{s.bank}</small></td><td>{s.date}</td><td>{fmt(s.gross)}</td><td>{fmt(s.fee)}</td><td><strong>{fmt(s.net)}</strong></td><td><span className={statusClass(s.status)}>{s.status}</span></td></tr>))}</tbody></table></div>
+              <div className="table-wrap"><table className="table"><thead><tr><th>Settlement</th><th>Provider / Bank</th><th>Date</th><th>Gross</th><th>Fee</th><th>Net</th><th>Status</th></tr></thead><tbody>{filteredSettlements.map((s) => (<tr key={s.id}><td><strong>{s.id}</strong><small>{s.reference}</small></td><td>{s.provider}<small>{s.bank}</small></td><td>{s.date}</td><td>{fmt(s.gross)}</td><td>{fmt(s.fee)}</td><td><strong>{fmt(s.net)}</strong></td><td><span className={statusClass(s.status)}>{s.status}</span></td></tr>))}{filteredSettlements.length === 0 && <tr><td colSpan={7} className="empty">No settlements yet.</td></tr>}</tbody></table></div>
             </>
           )}
           {page === "reconciliation" && (
             <>
-              <p className="hero-sub">Sync. Reconcile. Resolve. — Run a new reconciliation.</p>
+              <h1 className="page-h1">Reconciliation</h1>
+              <p className="hero-sub">Run a new reconciliation.</p>
               <div className="wizard-steps"><div className={`w-step ${wizardStep >= 1 ? "active" : ""}`}><span>1</span> Upload</div><div className="w-line" /><div className={`w-step ${wizardStep >= 2 ? "active" : ""}`}><span>2</span> Run</div><div className="w-line" /><div className={`w-step ${wizardStep >= 3 ? "active" : ""}`}><span>3</span> Results</div></div>
               {wizardStep === 1 && (<div className="panel wizard-panel"><h3>Step 1 — Upload your 3 sources</h3><p>Internal, Settlement, Bank statement. CSV for now. Or use demo data.</p><label className="upload-box"><input type="file" accept=".csv" onChange={(e) => { const f = e.target.files?.[0]; if (f) setUploadedFile(f.name); }} hidden /><div className="upload-icon">⬆</div><strong>{uploadedFile ? `Selected: ${uploadedFile}` : "Click to choose CSV file"}</strong><small>CSV only · Max 5MB</small></label><div className="wizard-actions"><button className="secondary-btn" onClick={() => { setUploadedFile(null); setWizardStep(2); }}>Use Demo Data →</button><button className="primary-btn" disabled={!uploadedFile} onClick={() => setWizardStep(2)}>{uploadedFile ? "Continue with CSV →" : "Choose a file to continue"}</button></div></div>)}
               {wizardStep === 2 && (<div className="panel wizard-panel"><h3>Step 2 — Ready to reconcile?</h3><p>Match by reference, then Gross − Fee = Net.</p>{reconError && <p className="error">{reconError}</p>}<div className="wizard-actions"><button className="secondary-btn" onClick={() => setWizardStep(1)}>← Back</button><button className="primary-btn" onClick={runReconciliation} disabled={reconLoading}>{reconLoading ? "Reconciling..." : "Run Reconciliation"}</button></div></div>)}
@@ -538,6 +545,7 @@ export default function App() {
           )}
           {page === "exceptions" && (
             <>
+              <h1 className="page-h1">Exceptions</h1>
               <p className="hero-sub">Resolution Queue — click an exception to investigate. We never call it fraud — only needs investigation.</p>
               <section className="cards"><div className="card"><span>OPEN</span><strong>{fmtInt(openExceptions.length)}</strong><small>Needs investigation</small></div><div className="card"><span>RESOLVED THIS SESSION</span><strong>{fmtInt(resolvedList.length)}</strong><small>Audit logged</small></div><div className="card"><span>OPEN VALUE</span><strong>{fmt(openExceptions.reduce((a, e) => a + n(e.amount), 0))}</strong><small>Still unresolved</small></div></section>
               <div className="filters"><label>Type<select value={excFilter} onChange={(e) => setExcFilter(e.target.value)}><option>All</option><option>Missing Settlement</option><option>Amount Mismatch</option><option>Duplicate</option><option>Fee Discrepancy</option><option>Orphan Bank Credit</option><option>Timing Difference</option></select></label><button className="clear-btn" onClick={() => { setSearch(""); setExcFilter("All"); setSelectedExc(null); }}>Clear</button></div>
@@ -553,6 +561,7 @@ export default function App() {
           )}
           {page === "integrations" && (
             <>
+              <h1 className="page-h1">Integrations</h1>
               <p className="hero-sub">Connect your money sources. Ledgerwatch only reads — it never moves money.</p>
               <div className="int-grid">{INTEGRATIONS.map((it) => (<div className="panel int-card" key={it.name}><div className="int-head"><span className="int-dot" style={{ background: PURPLE }}>{it.name[0]}</span><div><strong>{it.name}</strong><br /><small>{it.desc}</small></div></div><span className={it.status.includes("Available") ? "st matched" : "st warn"}>{it.status}</span><button className="secondary-btn" disabled={!it.status.includes("Available")}>{it.status.includes("Available") ? "Works today — see Export below" : "Coming soon — use CSV for now"}</button></div>))}</div>
               <div className="panel" style={{ marginTop: 16 }}><h3>Google Sheets Export</h3><p>Download any dataset as CSV, then in Google Sheets: <strong>File → Import → Upload</strong>.</p><div className="filters"><label>Dataset<select value={exportDataset} onChange={(e) => setExportDataset(e.target.value)}><option>Transactions</option><option>Settlements</option><option>Exceptions</option></select></label><button className="primary-btn" style={{ marginTop: 0 }} onClick={() => downloadCSV()}>Download {exportDataset} CSV</button></div>{exportMsg && <p className="success-box">{exportMsg}</p>}</div>
@@ -560,15 +569,17 @@ export default function App() {
           )}
           {page === "reports" && (
             <>
+              <h1 className="page-h1">Reports</h1>
               <p className="hero-sub">Share a clean summary with your accountant or boss — no raw CSV digging.</p>
               <div className="filters"><label>Period<select value={reportPeriod} onChange={(e) => setReportPeriod(e.target.value)}><option>This week</option><option>This month</option><option>Last month</option><option>All time</option></select></label><button className="primary-btn" style={{ marginTop: 0 }} onClick={downloadReport}>Download Report CSV</button></div>
               {reportMsg && <p className="success-box">{reportMsg}</p>}
-              <div className="panel"><h3>Reconciliation Report — {workspaceName} · {reportPeriod}</h3><p className="note">Generated {new Date().toLocaleString()} · Run REC-2026-104 · Ledgerwatch does not move money.</p><div className="cards"><div className="card"><span>COLLECTED (INTERNAL)</span><strong>{fmt(overview.total_value)}</strong><small>{fmtInt(overview.transactions)} transactions</small></div><div className="card"><span>RECEIVED (SETTLEMENTS)</span><strong>{fmt(overview.settlements_received)}</strong><small>Net after fees</small></div><div className="card"><span>FLAGGED</span><strong>{fmt(overview.flagged_total)}</strong><small>{fmtInt(overview.flagged_count)} exceptions</small></div><div className="card"><span>RECONCILIATION RATE</span><strong>{n(overview.reconciliation_rate)}%</strong><small>{fmtInt(openExceptions.length)} open · {fmtInt(resolvedList.length)} resolved</small></div></div><h4>By Exception Type</h4>{asArray<BreakdownItem>(overview.breakdown).map((b) => (<div className="row" key={b.label}><div><strong>{b.label}</strong> <span>· {fmtInt(b.count)} · {b.pct}</span></div><strong>{fmt(b.amount)}</strong></div>))}<h4>What this means</h4><p>If Collected ≠ Received, the difference is in Exceptions. Resolve each exception with a reason + note, and the Audit Trail proves what you did. No mismatch is called fraud — only needs investigation.</p><div className="wizard-actions"><button className="secondary-btn" onClick={() => downloadCSV("Exceptions")}>Export Exceptions</button><button className="secondary-btn" onClick={() => downloadCSV("Transactions")}>Export Transactions</button><button className="primary-btn" onClick={downloadReport}>Download Full Report</button></div></div>
+              <div className="panel"><h3>Reconciliation Report — {workspaceName} · {reportPeriod}</h3><p className="note">Generated {new Date().toLocaleString()} · Run REC-2026-104 · Ledgerwatch does not move money.</p><div className="cards"><div className="card"><span>COLLECTED (INTERNAL)</span><strong>{fmt(overview.total_value)}</strong><small>{fmtInt(overview.transactions)} transactions</small></div><div className="card"><span>RECEIVED (SETTLEMENTS)</span><strong>{fmt(overview.settlements_received)}</strong><small>Net after fees</small></div><div className="card"><span>FLAGGED</span><strong>{fmt(overview.flagged_total)}</strong><small>{fmtInt(overview.flagged_count)} exceptions</small></div><div className="card"><span>RECONCILIATION RATE</span><strong>{n(overview.reconciliation_rate)}%</strong><small>{fmtInt(openExceptions.length)} open · {fmtInt(resolvedList.length)} resolved</small></div></div><h4>By Exception Type</h4>{asArray<BreakdownItem>(overview.breakdown).map((b) => (<div className="row" key={b.label}><div><strong>{b.label}</strong> <span>· {fmtInt(b.count)} · {b.pct}</span></div><strong>{fmt(b.amount)}</strong></div>))}{asArray<BreakdownItem>(overview.breakdown).length === 0 && <p className="empty">No breakdown yet — import data to generate a report.</p>}<h4>What this means</h4><p>If Collected ≠ Received, the difference is in Exceptions. Resolve each exception with a reason + note, and the Audit Trail proves what you did. No mismatch is called fraud — only needs investigation.</p><div className="wizard-actions"><button className="secondary-btn" onClick={() => downloadCSV("Exceptions")}>Export Exceptions</button><button className="secondary-btn" onClick={() => downloadCSV("Transactions")}>Export Transactions</button><button className="primary-btn" onClick={downloadReport}>Download Full Report</button></div></div>
               <div className="panel" style={{ marginTop: 16 }}><h3>Audit Trail (this session)</h3>{audit.map((a, i) => (<div className="audit-row" key={i}><small>{a.time} · {a.by}</small><span>{a.action}</span></div>))}</div>
             </>
           )}
           {page === "admin" && isAdmin && (
             <>
+              <h1 className="page-h1">Admin</h1>
               <p className="hero-sub">Private Admin Console — only dsahmadmagaji@gmail.com. Backend enforces access.</p>
               <div className="panel"><h3>SYSTEM OVERVIEW</h3>
                 <label className="field">Admin Token (from Render ENV, not in code)<input type="password" value={adminToken} onChange={(e) => setAdminToken(e.target.value)} placeholder="Paste ADMIN_TOKEN from Render" /></label>
@@ -585,7 +596,8 @@ export default function App() {
           )}
           {page === "settings" && (
             <>
-              <p className="hero-sub">Manage your account and preferences. — LedgerWatch-style, one card per idea.</p>
+              <h1 className="page-h1">Settings</h1>
+              <p className="hero-sub">Manage your account and preferences.</p>
               {settingsMsg && <p className="success-box">{settingsMsg}</p>}
               <div className="panel"><h3>PROFILE</h3><p className="note">Manage your account information.</p><label className="field">Email address<input value={user?.email || ""} disabled /></label><p className="note">Your account email is managed by your sign-in provider and cannot be changed here.</p><label className="field">Workspace / Business name<input value={workspaceName} onChange={(e) => setWorkspaceName(e.target.value)} placeholder="Demo Commerce Ltd" /></label><label className="field">Currency<select value={currency} onChange={(e) => setCurrency(e.target.value)}><option>NGN (₦)</option><option>USD ($)</option><option>GBP (£)</option></select></label></div>
               <div className="panel" style={{ marginTop: 16 }}><h3>WHATSAPP ASSISTANT</h3><p className="note">Link your number to message Ledgerwatch on WhatsApp. You&apos;ll send a one-time code from the number you want to link.</p>
