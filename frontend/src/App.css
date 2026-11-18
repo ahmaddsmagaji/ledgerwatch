@@ -229,3 +229,84 @@ body.dark-mode .landing-mobile-menu button{color:#E2E8F0}
   .wizard-actions .primary-btn,.wizard-actions .secondary-btn{width:100%;text-align:center}
   .lw-wordmark{font-size:17px}
 }
+/* === MOBILE LANDING HEADER FIX — Phone only, Desktop unchanged === */
+.landing-header-inner{
+  display:flex !important;
+  align-items:center !important;
+  justify-content:space-between !important;
+  gap:12px !important;
+  width:100% !important;
+  max-width:1120px !important;
+  margin:0 auto !important;
+  padding:12px 16px !important;
+}
+.landing-hamburger{
+  display:none !important;
+  font-size:24px !important;
+  line-height:1 !important;
+  background:none !important;
+  border:none !important;
+  cursor:pointer !important;
+  padding:8px 4px 8px 12px !important;
+  color:#131118 !important;
+  flex-shrink:0 !important;
+}
+body.dark-mode .landing-hamburger{ color:#fff !important; }
+
+@media (max-width: 850px){
+  .landing-desktop-actions{ display:none !important; }
+  .landing-hamburger{ display:block !important; }
+  .landing-header-inner{ padding:10px 16px !important; }
+  .landing-nav-links{ display:none !important; }
+  .lw-logo{ flex:1 !important; min-width:0 !important; }
+  .lw-wordmark{ font-size:18px !important; }
+  .landing-mobile-menu{
+    display:flex !important;
+    flex-direction:column !important;
+    gap:4px !important;
+    padding:8px 16px 20px !important;
+    background:#fff !important;
+    border-top:1px solid #EAECF0 !important;
+  }
+  body.dark-mode .landing-mobile-menu{ background:#1E293B !important; border-color:#334155 !important; }
+  .mobile-menu-link{
+    text-align:left !important;
+    padding:14px 4px !important;
+    background:none !important;
+    border:none !important;
+    font-size:16px !important;
+    font-weight:600 !important;
+    color:#131118 !important;
+    cursor:pointer !important;
+    width:100% !important;
+  }
+  body.dark-mode .mobile-menu-link{ color:#F1F5F9 !important; }
+  .mobile-menu-divider{ height:1px !important; background:#EAECF0 !important; margin:8px 0 !important; }
+  body.dark-mode .mobile-menu-divider{ background:#334155 !important; }
+  .mobile-menu-action{
+    width:100% !important;
+    text-align:left !important;
+    padding:14px 16px !important;
+    border-radius:12px !important;
+    border:1px solid #E2E8F0 !important;
+    background:#fff !important;
+    font-size:15px !important;
+    font-weight:700 !important;
+    color:#131118 !important;
+    cursor:pointer !important;
+  }
+  body.dark-mode .mobile-menu-action{ background:#0F172A !important; border-color:#334155 !important; color:#fff !important; }
+  .mobile-menu-cta{
+    width:100% !important;
+    text-align:center !important;
+    padding:15px 16px !important;
+    border-radius:12px !important;
+    border:none !important;
+    background:#5B0DBA !important;
+    font-size:15px !important;
+    font-weight:800 !important;
+    color:#fff !important;
+    cursor:pointer !important;
+    margin-top:4px !important;
+  }
+}

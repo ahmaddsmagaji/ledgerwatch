@@ -59,12 +59,12 @@ function getUsers(): Record<string, User & { password: string }> { try { return 
 function getSession(): User | null { try { return JSON.parse(localStorage.getItem("lw_session") || "null"); } catch { return null; } }
 function GoogleIcon() { return <span style={{ width: 18, height: 18, borderRadius: "50%", background: "#fff", border: "1px solid #e2e8f0", display: "inline-flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 13, color: "#4285F4", flexShrink: 0 }}>G</span>; }
 
-// FIXED LOGO: single component, 40x40 icon + Ledger black / Watch purple. No nested divs, no black box.
+// FIXED LOGO: single component, 40x40 icon + 【entity-Ledger¦canonical_name=Ledger】 black / Watch purple. No nested divs, no black box.
 function LogoImg({ size = 40 }: { size?: number }) {
   return (
     <span className="lw-logo" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
       <img src={LOGO} alt="LedgerWatch" style={{ height: size, width: size }} />
-      <span className="lw-wordmark">Ledger<span>Watch</span></span>
+      <span className="lw-wordmark">【entity-Ledger¦canonical_name=Ledger】<span>Watch</span></span>
     </span>
   );
 }
@@ -356,18 +356,28 @@ export default function App() {
               <button onClick={() => document.getElementById("how")?.scrollIntoView({ behavior: "smooth" })}>How it works</button>
               <button onClick={() => document.getElementById("faq")?.scrollIntoView({ behavior: "smooth" })}>FAQ</button>
             </nav>
-            <div className="landing-header-actions">
+            {/* DESKTOP ONLY — hidden on phone by CSS */}
+            <div className="landing-header-actions landing-desktop-actions">
               <button onClick={() => setDarkMode((v) => !v)} className="pill-btn">{darkMode ? "Light" : "Dark"}</button>
               {user ? <button onClick={() => setView("app")} className="primary-pill">Back to App ({user.name})</button> : <><button onClick={() => openAuth("login")} className="pill-btn">Log In</button><button onClick={() => openAuth("signup")} className="primary-pill">Start Free</button></>}
-              <button className="landing-hamburger" onClick={() => setMobileMenu((v) => !v)} aria-label="Menu">{mobileMenu ? "✕" : "☰"}</button>
             </div>
+            <button className="landing-hamburger" onClick={() => setMobileMenu((v) => !v)} aria-label="Menu">{mobileMenu ? "✕" : "☰"}</button>
           </div>
           {mobileMenu && (
             <div className="landing-mobile-menu">
-              <button onClick={() => { setMobileMenu(false); document.getElementById("features")?.scrollIntoView({ behavior: "smooth" }); }}>Features</button>
-              <button onClick={() => { setMobileMenu(false); document.getElementById("how")?.scrollIntoView({ behavior: "smooth" }); }}>How it works</button>
-              <button onClick={() => { setMobileMenu(false); document.getElementById("faq")?.scrollIntoView({ behavior: "smooth" }); }}>FAQ</button>
-              {!user && <><button onClick={() => openAuth("login")} className="pill-btn">Log In</button><button onClick={() => openAuth("signup")} className="primary-pill">Start Free</button></>}
+              <button className="mobile-menu-link" onClick={() => { setMobileMenu(false); document.getElementById("features")?.scrollIntoView({ behavior: "smooth" }); }}>Features</button>
+              <button className="mobile-menu-link" onClick={() => { setMobileMenu(false); document.getElementById("how")?.scrollIntoView({ behavior: "smooth" }); }}>How it works</button>
+              <button className="mobile-menu-link" onClick={() => { setMobileMenu(false); document.getElementById("faq")?.scrollIntoView({ behavior: "smooth" }); }}>FAQ</button>
+              <div className="mobile-menu-divider" />
+              <button className="mobile-menu-action" onClick={() => setDarkMode((v) => !v)}>{darkMode ? "☀️ Light mode" : "🌙 Dark mode"}</button>
+              {user ? (
+                <button className="mobile-menu-cta" onClick={() => { setMobileMenu(false); setView("app"); }}>Back to App ({user.name}) →</button>
+              ) : (
+                <>
+                  <button className="mobile-menu-action" onClick={() => openAuth("login")}>Log In</button>
+                  <button className="mobile-menu-cta" onClick={() => openAuth("signup")}>Start Free →</button>
+                </>
+              )}
             </div>
           )}
         </header>
