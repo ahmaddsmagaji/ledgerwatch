@@ -254,3 +254,13 @@ body.dark-mode .landing-hero p { color: #94a3b8; }
   .landing-header img { height: 42px !important; }
   .lw-hamburger-always { display: none !important; } /* hamburger only on phone, like Upwork */
 }
+
+/* Brand: icon + Ledgerwatch text like KoboSync */
+.lw-brand-text { font-family: Inter, system-ui, sans-serif; }
+@media (max-width: 700px) {
+  .lw-brand-text { font-size: 18px !important; }
+  .landing-header img { height: 40px !important; min-width: 40px !important; }
+}
+@media (min-width: 701px) {
+  .landing-header img { height: 48px !important; }
+}
