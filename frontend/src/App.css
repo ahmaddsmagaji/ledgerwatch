@@ -231,3 +231,26 @@ body.dark-mode .landing-hero p { color: #94a3b8; }
   .landing-nav-links { display: none !important; }
   .landing-nav-desktop { padding: 10px 12px !important; }
 }
+
+/* FIX: Phone header was hidden - force it to show */
+.landing-header { display: block !important; position: sticky !important; top: 0 !important; z-index: 100 !important; background: #fff !important; width: 100% !important; }
+.landing-nav-desktop { display: flex !important; align-items: center !important; justify-content: space-between !important; width: 100% !important; }
+.lw-hamburger-always, .landing-hamburger { display: inline-block !important; font-size: 26px !important; }
+
+/* Logo - moderate size, visible but not huge */
+.landing-header img { height: 42px !important; width: auto !important; min-width: 110px !important; max-width: 170px !important; object-fit: contain !important; }
+
+/* PHONE: keep header, hide only the links */
+@media (max-width: 700px) {
+  .landing-header { padding: 0 !important; }
+  .landing-nav-desktop { padding: 10px 12px !important; gap: 8px !important; }
+  .landing-nav-links { display: none !important; }
+  .landing-header img { height: 36px !important; min-width: 95px !important; max-width: 140px !important; }
+  .landing-nav-desktop .pill-btn { padding: 7px 10px !important; font-size: 13px !important; }
+  .landing-nav-desktop .primary-pill { padding: 8px 12px !important; font-size: 13px !important; }
+}
+/* PC: moderate logo */
+@media (min-width: 701px) {
+  .landing-header img { height: 42px !important; }
+  .lw-hamburger-always { display: none !important; } /* hamburger only on phone, like Upwork */
+}

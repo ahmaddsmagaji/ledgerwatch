@@ -342,8 +342,8 @@ export default function App() {
         <header className="landing-header" style={{ background: cardBg }}>
           <nav className="landing-nav-desktop" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", maxWidth: 1200, margin: "0 auto", padding: "12px 20px", boxSizing: "border-box" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 16, minWidth: 0 }}>
-              <button className="landing-hamburger" onClick={() => setMobileMenu((v) => !v)} aria-label="Menu" style={{ fontSize: 24, background: "none", border: "none", cursor: "pointer", padding: "4px 8px" }}>{mobileMenu ? "X" : "☰"}</button>
-              <img src={LOGO} alt="Ledgerwatch" style={{ height: 30, width: "auto", objectFit: "contain", cursor: "pointer", display: "block" }} onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} />
+              <button className="landing-hamburger lw-hamburger-always" onClick={() => setMobileMenu((v) => !v)} aria-label="Menu" style={{ fontSize: 24, background: "none", border: "none", cursor: "pointer", padding: "4px 8px" }}>{mobileMenu ? "X" : "☰"}</button>
+              <img src={LOGO} alt="Ledgerwatch" style={{ height: 42, width: "auto", minWidth: 110, objectFit: "contain", cursor: "pointer", display: "block" }} onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} />
               <div className="landing-nav-links" style={{ display: "flex", alignItems: "center", gap: 20 }}>
                 <button onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })}>Features</button>
                 <button onClick={() => document.getElementById("how")?.scrollIntoView({ behavior: "smooth" })}>How it works</button>
