@@ -340,7 +340,6 @@ export default function App() {
     return (
       <div style={{ fontFamily: "Inter, system-ui, sans-serif", color: fg, background: bg, minHeight: "100vh" }}>
         <header className="landing-header" style={{ background: cardBg }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}><LogoImg size={40} radius={10} /><div><div style={{ fontWeight: 900, fontSize: 22, lineHeight: 1 }}>Ledgerwatch</div><div style={{ fontSize: 10, color: PURPLE, fontWeight: 800, letterSpacing: 1.2 }}>RECONCILE • PROVE • RESOLVE</div></div></div>
           <nav className="landing-nav-desktop">
             <button onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })}>Features</button>
             <button onClick={() => document.getElementById("how")?.scrollIntoView({ behavior: "smooth" })}>How it works</button>

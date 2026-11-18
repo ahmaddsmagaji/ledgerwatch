@@ -1,2 +1,40 @@
 * { box-sizing: border-box; }
 body { margin: 0; }
+
+/* Ledgerwatch Landing - Logo only, balanced */
+.landing-hero, .hero, .landing {
+  text-align: center !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 24px !important;
+  padding: 64px 20px 48px !important;
+  max-width: 720px !important;
+  margin: 0 auto !important;
+}
+.landing-hero img, .hero img, .landing img {
+  margin: 0 auto !important;
+  display: block !important;
+}
+.landing-hero h1, .hero h1, .landing h1 {
+  text-align: center !important;
+  margin: 0 auto !important;
+  line-height: 1.15 !important;
+  max-width: 620px !important;
+}
+.landing-hero p, .hero p, .landing p {
+  text-align: center !important;
+  margin: 0 auto !important;
+  max-width: 560px !important;
+}
+.landing-actions, .hero-actions, .hero-buttons {
+  display: flex !important;
+  justify-content: center !important;
+  gap: 12px !important;
+  flex-wrap: wrap !important;
+  margin-top: 8px !important;
+}
+@media (max-width: 640px) {
+  .landing-hero, .hero, .landing { padding: 48px 16px 32px !important; gap: 20px !important; }
+}
