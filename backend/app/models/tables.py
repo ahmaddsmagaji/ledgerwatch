@@ -1,7 +1,7 @@
 import enum
 from datetime import date, datetime, timezone
 
-from sqlalchemy import Boolean, ForeignKey, DateTime, CheckConstraint, Enum, ForeignKey, String, Text
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, create_engine, event
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
