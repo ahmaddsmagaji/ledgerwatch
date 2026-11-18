@@ -341,7 +341,17 @@ export default function App() {
       <div style={{ fontFamily: "Inter, system-ui, sans-serif", color: fg, background: bg, minHeight: "100vh" }}>
         <header className="landing-header" style={{ background: cardBg }}>
           <nav className="landing-nav-desktop">
-            <button onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })}>Features</button>
+            <button onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })}><header className="lw-topbar">
+        <div className="lw-top-left">
+          <button className="lw-hamburger" aria-label="Menu" onClick={() => document.body.classList.toggle("lw-menu-open")}>☰</button>
+          <img src="/brand/logo.png" alt="Ledgerwatch" className="lw-top-logo" onClick={() => window.scrollTo({top: 0, behavior: "smooth"})} />
+        </div>
+        <div className="lw-top-right">
+          <button className="lw-dark-btn" onClick={() => document.documentElement.classList.toggle("dark")}>Dark</button>
+          <button className="lw-signup-btn" onClick={() => { const b = document.body.innerText.includes("Start Free"); window.scrollTo({top: 0, behavior: "smooth"}); const el = Array.from(document.querySelectorAll("button")).find(x => x.textContent?.includes("Start Free")); if (el) el.click(); }}>Sign up</button>
+        </div>
+      </header>
+Features</button>
             <button onClick={() => document.getElementById("how")?.scrollIntoView({ behavior: "smooth" })}>How it works</button>
             <button onClick={() => document.getElementById("faq")?.scrollIntoView({ behavior: "smooth" })}>FAQ</button>
             <button onClick={() => setDarkMode((v) => !v)} className="pill-btn">{darkMode ? "Light" : "Dark"}</button>
