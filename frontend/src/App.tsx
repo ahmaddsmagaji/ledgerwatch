@@ -90,12 +90,10 @@ export default function App() {
   const [currentPw, setCurrentPw] = useState("");
   const [newPw, setNewPw] = useState("");
   const [pwMsg, setPwMsg] = useState("");
-  const [backendStatus, setBackendStatus] = useState("Checking backend...");
   const [page, setPage] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [overview, setOverview] = useState<OverviewData>(FALLBACK_OVERVIEW);
-  const [overviewSource, setOverviewSource] = useState("Demo data");
   const [txns, setTxns] = useState<Txn[]>([]);
   const [settlements, setSettlements] = useState<Settlement[]>([]);
   const [statusFilter, setStatusFilter] = useState("All");
@@ -146,8 +144,7 @@ export default function App() {
   useEffect(() => { document.body.classList.toggle("dark-mode", darkMode); localStorage.setItem("lw_dark", darkMode ? "1" : "0"); }, [darkMode]);
   useEffect(() => {
     if (view !== "app") return;
-    fetch(`${API_URL}/health`).then((r) => r.json()).then((d) => setBackendStatus(`Backend connected: ${d.status}`)).catch(() => setBackendStatus("Backend NOT connected"));
-    fetch(`${API_URL}/api/summary`).then((r) => r.json()).then((d) => { if (d && typeof d === "object") { setOverview(mapSummary(d)); setOverviewSource("Live from backend"); } }).catch(() => {});
+    fetch(`${API_URL}/api/summary`).then((r) => r.json()).then((d) => { if (d && typeof d === "object") { setOverview(mapSummary(d)); } }).catch(() => {});
     fetch(`${API_URL}/api/overview`).then((r) => r.json()).then((d) => { if (d && typeof d === "object" && d.total_value != null) { setOverview((prev) => ({ ...prev, ...d, breakdown: asArray<BreakdownItem>(d.breakdown ?? prev.breakdown) })); } }).catch(() => {});
     fetch(`${API_URL}/api/transactions`).then((r) => r.json()).then((d) => setTxns(asArray<Txn>(Array.isArray(d) ? d : (d as any)?.items))).catch(() => {});
     fetch(`${API_URL}/api/settlements`).then((r) => r.json()).then((d) => setSettlements(asArray<Settlement>(Array.isArray(d) ? d : (d as any)?.items))).catch(() => {});
@@ -456,7 +453,6 @@ export default function App() {
         <header className="topbar" style={{ position: "relative" }}>
           <button className="hamburger" onClick={() => setSidebarOpen(true)}>☰</button><h2>{activeLabel}</h2>
           <input className="search" placeholder="Search TXN, EXC, reference..." value={search} onChange={(e) => setSearch(e.target.value)} />
-          <span className={backendStatus.includes("connected") ? "backend-pill ok" : "backend-pill bad"}>{backendStatus}</span>
           <button onClick={() => setDarkMode((v) => !v)} style={{ padding: "8px 12px", borderRadius: 999, border: "1px solid #e2e8f0", background: "#fff", cursor: "pointer", fontWeight: 700 }}>{darkMode ? "Light" : "Dark"}</button>
           <div style={{ position: "relative" }}>
             <button onClick={() => setShowAccountMenu((v) => !v)} className="user" style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 999, padding: "6px 12px 6px 6px", cursor: "pointer" }}>
@@ -476,8 +472,8 @@ export default function App() {
         <main className="content">
           {page === "overview" && (
             <>
-              <div className="overview-header"><div><h2 className="overview-title">Overview</h2><p className="overview-subtitle">Payments, settlements and bank deposits — reconciled. {overviewSource} · {fmtInt(openExceptions.length)} open · {fmtInt(resolvedList.length)} resolved in this session</p></div>
-                <div className="overview-header-right"><label className="period-label">Period<select value={reportPeriod} onChange={(e) => setReportPeriod(e.target.value)}><option>This week</option><option>This month</option><option>Last month</option><option>All time</option></select></label><span className="freshness-pill">{overviewSource}</span></div></div>
+              <div className="overview-header"><div><h2 className="overview-title">Overview</h2><p className="overview-subtitle">Payments, settlements and bank deposits — reconciled. {fmtInt(openExceptions.length)} open · {fmtInt(resolvedList.length)} resolved in this session</p></div>
+                <div className="overview-header-right"><label className="period-label">Period<select value={reportPeriod} onChange={(e) => setReportPeriod(e.target.value)}><option>This week</option><option>This month</option><option>Last month</option><option>All time</option></select></label></div></div>
               <section className="kpi-grid">
                 <div className="card kpi-card kpi-primary"><span>RECONCILIATION RATE</span><strong>{n(overview.reconciliation_rate)}%</strong><div className="kpi-progress"><span style={{ width: `${Math.min(100, Math.max(0, n(overview.reconciliation_rate)))}%` }} /></div><small>Matched vs flagged • {reportPeriod}</small></div>
                 <div className="card kpi-card"><span>TRANSACTION VALUE</span><strong>{fmt(overview.total_value)}</strong><small>{fmtInt(overview.transactions)} transactions</small></div>
