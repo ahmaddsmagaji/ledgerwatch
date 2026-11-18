@@ -59,7 +59,7 @@ function getUsers(): Record<string, User & { password: string }> { try { return 
 function getSession(): User | null { try { return JSON.parse(localStorage.getItem("lw_session") || "null"); } catch { return null; } }
 function GoogleIcon() { return <span style={{ width: 18, height: 18, borderRadius: "50%", background: "#fff", border: "1px solid #e2e8f0", display: "inline-flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 13, color: "#4285F4", flexShrink: 0 }}>G</span>; }
 function LogoImg({ size = 40, radius = 10 }: { size?: number; radius?: number }) { return <div style={{ width: size, height: size, borderRadius: radius, overflow: "hidden", background: "#000", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", flexShrink: 0 }} onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
-                <img src={LOGO} alt="Ledgerwatch" style={{ height: 48, width: "auto", minWidth: 44, objectFit: "contain", display: "block" }} /><span className="lw-wordmark">Ledger<span style={{ color: "#5B0DBA" }}>Watch</span></span>
+                <img src={LOGO} alt="Ledgerwatch" style={{ height: 48, width: "auto", minWidth: 44, objectFit: "contain", display: "block" }} />
                 <span style={{ fontSize: 21, fontWeight: 800, letterSpacing: -0.5, color: "#1A1A1A", whiteSpace: "nowrap" }}>Ledgerwatch</span>
               </span></div>; }
 function mapSummary(s: any): OverviewData {
@@ -346,7 +346,7 @@ export default function App() {
           <nav className="landing-nav-desktop" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", maxWidth: 1200, margin: "0 auto", padding: "12px 20px", boxSizing: "border-box" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 16, minWidth: 0 }}>
               <button className="landing-hamburger lw-hamburger-always" onClick={() => setMobileMenu((v) => !v)} aria-label="Menu" style={{ fontSize: 24, background: "none", border: "none", cursor: "pointer", padding: "4px 8px" }}>{mobileMenu ? "X" : "☰"}</button>
-              <img src={LOGO} alt="Ledgerwatch" style={{ height: 42, width: "auto", minWidth: 110, objectFit: "contain", cursor: "pointer", display: "block" }} onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} />
+              <img src="/brand/logo-full.png" alt=" Ledgerwatch" style={{ height: 38, width: "auto", maxWidth: 220, objectFit: "contain", display: "block" }} />
               <div className="landing-nav-links" style={{ display: "flex", alignItems: "center", gap: 20 }}>
                 <button onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })}>Features</button>
                 <button onClick={() => document.getElementById("how")?.scrollIntoView({ behavior: "smooth" })}>How it works</button>
