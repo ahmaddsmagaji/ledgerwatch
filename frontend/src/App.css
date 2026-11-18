@@ -22,7 +22,7 @@ img{max-width:100%;height:auto}
 
 /* === LOGO — ONE RULE ONLY. 40x40, never stretched === */
 .lw-logo{display:inline-flex;align-items:center;gap:8px;cursor:pointer;flex-shrink:0;text-decoration:none}
-.lw-logo img{height:40px !important;width:40px !important;object-fit:cover !important;border-radius:9px !important;display:block !important;flex-shrink:0 !important;background:#000}
+.lw-logo img{height:40px !important;width:40px !important;object-fit:contain !important;border-radius:9px !important;display:block !important;flex-shrink:0 !important;background:transparent !important}
 .lw-wordmark{font-size:20px;font-weight:800;letter-spacing:-.3px;color:#131118;white-space:nowrap;display:inline-flex;align-items:center}
 .lw-wordmark span{color:#5B0DBA}
 .sidebar .lw-wordmark{font-size:18px}
@@ -309,4 +309,16 @@ body.dark-mode .landing-hamburger{ color:#fff !important; }
     cursor:pointer !important;
     margin-top:4px !important;
   }
+}
+/* === HEADER WRAP FIX === */
+.landing-header-inner{ flex-wrap:nowrap !important; }
+.landing-nav-links{ flex-wrap:nowrap !important; flex-shrink:0 !important; }
+.landing-nav-links button{ white-space:nowrap !important; padding:10px 10px !important; }
+.landing-header-actions{ flex-wrap:nowrap !important; }
+.lw-wordmark{ white-space:nowrap !important; }
+
+@media (max-width: 850px){
+  .landing-header-actions, .landing-desktop-actions{ display:none !important; }
+  .landing-hamburger{ display:block !important; }
+  .landing-nav-links{ display:none !important; }
 }

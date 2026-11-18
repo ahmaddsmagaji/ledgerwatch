@@ -63,7 +63,7 @@ function LogoImg({ size = 40 }: { size?: number }) {
   return (
     <span className="lw-logo" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
       <img src={LOGO} alt="LedgerWatch" style={{ height: size, width: size }} />
-      <span className="lw-wordmark"><span>Watch</span></span>
+      <span className="lw-wordmark">Ledger<span>Watch</span></span>
     </span>
   );
 }
