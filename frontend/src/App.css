@@ -269,3 +269,14 @@ body.dark-mode .landing-hero p { color: #94a3b8; }
 .lw-wordmark { font-size: 20px; font-weight: 800; letter-spacing: -0.3px; color: #131118; margin-left: 8px; white-space: nowrap; }
 .lw-wordmark span { color: #5B0DBA; }
 @media (max-width: 640px) { .lw-wordmark { font-size: 17px; } }
+
+/* FRONTEND ONLY - LedgerWatch logo, exact icon, like inside app */
+.landing-header { background: #fff !important; }
+.landing-header img, .auth-logo img, .login-logo img {
+  height: 40px !important; width: 40px !important;
+  object-fit: cover !important; border-radius: 9px !important;
+  display: block !important; flex-shrink: 0 !important;
+  background: transparent !important;
+}
+.lw-wordmark { font-size: 20px; font-weight: 800; letter-spacing: -0.3px; color: #131118; margin-left: 8px; white-space: nowrap; display: inline-flex; align-items: center; }
+.lw-wordmark span { color: #5B0DBA; }
