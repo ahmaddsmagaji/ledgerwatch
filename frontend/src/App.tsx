@@ -58,7 +58,10 @@ const asArray = <T,>(v: unknown): T[] => (Array.isArray(v) ? (v as T[]) : []);
 function getUsers(): Record<string, User & { password: string }> { try { return JSON.parse(localStorage.getItem("lw_users") || "{}"); } catch { return {}; } }
 function getSession(): User | null { try { return JSON.parse(localStorage.getItem("lw_session") || "null"); } catch { return null; } }
 function GoogleIcon() { return <span style={{ width: 18, height: 18, borderRadius: "50%", background: "#fff", border: "1px solid #e2e8f0", display: "inline-flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 13, color: "#4285F4", flexShrink: 0 }}>G</span>; }
-function LogoImg({ size = 40, radius = 10 }: { size?: number; radius?: number }) { return <div style={{ width: size, height: size, borderRadius: radius, overflow: "hidden", background: "#000", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}><img src={LOGO} alt="Ledgerwatch logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} /></div>; }
+function LogoImg({ size = 40, radius = 10 }: { size?: number; radius?: number }) { return <div style={{ width: size, height: size, borderRadius: radius, overflow: "hidden", background: "#000", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", flexShrink: 0 }} onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
+                <img src={LOGO} alt="Ledgerwatch" style={{ height: 48, width: "auto", minWidth: 44, objectFit: "contain", display: "block" }} />
+                <span style={{ fontSize: 21, fontWeight: 800, letterSpacing: -0.5, color: darkMode ? "#fff" : "#1A1A1A", whiteSpace: "nowrap" }}>Ledgerwatch</span>
+              </span></div>; }
 function mapSummary(s: any): OverviewData {
   if (!s || typeof s !== "object") return FALLBACK_OVERVIEW;
   const ordersTotal = n(s.orders_total ?? s.transactions);
