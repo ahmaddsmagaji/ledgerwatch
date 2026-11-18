@@ -1,7 +1,7 @@
 import enum
 from datetime import date, datetime, timezone
 
-from sqlalchemy import CheckConstraint, Enum, ForeignKey, String, Text
+from sqlalchemy import Boolean, ForeignKey, DateTime, CheckConstraint, Enum, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -148,3 +148,34 @@ class AuditLog(Base):
     actor: Mapped[str] = mapped_column(String(80))
     note: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
+
+# ---- Ledgerwatch Admin Stage 2 - real tables ----
+class User(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    email = Column(String, unique=True, index=True, nullable=False)
+    password_hash = Column(String, nullable=True)
+    role = Column(String, default="auditor", nullable=False)
+    status = Column(String, default="active", nullable=False)
+    created_at = Column(DateTime, nullable=False, default=lambda: __import__("datetime").datetime.now(__import__("datetime").timezone.utc))
+    last_activity_at = Column(DateTime, nullable=True)
+
+class AuditEvent(Base):
+    __tablename__ = "audit_events"
+    id = Column(Integer, primary_key=True, index=True)
+    created_at = Column(DateTime, nullable=False, default=lambda: __import__("datetime").datetime.now(__import__("datetime").timezone.utc))
+    actor = Column(String, nullable=False)
+    action = Column(String, nullable=False)
+    target = Column(String, default="", nullable=False)
+    outcome = Column(String, default="success", nullable=False)
+    meta = Column(String, default="", nullable=False)
+
+class PasswordReset(Base):
+    __tablename__ = "password_resets"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    token_hash = Column(String, nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    used = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime, nullable=False, default=lambda: __import__("datetime").datetime.now(__import__("datetime").timezone.utc))
