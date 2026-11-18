@@ -356,14 +356,6 @@ export default function App() {
             </div>
           </nav>
         </header>
-Features</button>
-            <button onClick={() => document.getElementById("how")?.scrollIntoView({ behavior: "smooth" })}>How it works</button>
-            <button onClick={() => document.getElementById("faq")?.scrollIntoView({ behavior: "smooth" })}>FAQ</button>
-            <button onClick={() => setDarkMode((v) => !v)} className="pill-btn">{darkMode ? "Light" : "Dark"}</button>
-            {user ? <button onClick={() => setView("app")} className="primary-pill">Back to App ({user.name})</button> : <><button onClick={() => openAuth("login")} className="pill-btn">Log In</button><button onClick={() => openAuth("signup")} className="primary-pill">Start Free</button></>}
-          </nav>
-          {!user && <><button className="landing-dark-btn" onClick={() => setDarkMode((v) => !v)}>{darkMode ? "Light" : "Dark"}</button><button className="landing-hamburger" onClick={() => setMobileMenu((v) => !v)}>{mobileMenu ? "X" : "☰"}</button></>}
-        </header>
         {mobileMenu && !user && (
           <div className="landing-mobile-menu" style={{ background: cardBg }}>
             <button onClick={() => { setMobileMenu(false); document.getElementById("features")?.scrollIntoView({ behavior: "smooth" }); }}>Features</button>
