@@ -14,7 +14,7 @@ from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
-from app.core.database import get_db
+from app.api.deps import get_db
 from app.models.tables import User, AuditEvent, PasswordReset
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
