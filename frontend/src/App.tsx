@@ -340,17 +340,22 @@ export default function App() {
     return (
       <div style={{ fontFamily: "Inter, system-ui, sans-serif", color: fg, background: bg, minHeight: "100vh" }}>
         <header className="landing-header" style={{ background: cardBg }}>
-          <nav className="landing-nav-desktop">
-            <button onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })}><header className="lw-topbar">
-        <div className="lw-top-left">
-          <button className="lw-hamburger" aria-label="Menu" onClick={() => document.body.classList.toggle("lw-menu-open")}>☰</button>
-          <img src="/brand/logo.png" alt="Ledgerwatch" className="lw-top-logo" onClick={() => window.scrollTo({top: 0, behavior: "smooth"})} />
-        </div>
-        <div className="lw-top-right">
-          <button className="lw-dark-btn" onClick={() => document.documentElement.classList.toggle("dark")}>Dark</button>
-          <button className="lw-signup-btn" onClick={() => { const b = document.body.innerText.includes("Start Free"); window.scrollTo({top: 0, behavior: "smooth"}); const el = Array.from(document.querySelectorAll("button")).find(x => x.textContent?.includes("Start Free")); if (el) el.click(); }}>Sign up</button>
-        </div>
-      </header>
+          <nav className="landing-nav-desktop" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", maxWidth: 1200, margin: "0 auto", padding: "12px 20px", boxSizing: "border-box" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 16, minWidth: 0 }}>
+              <button className="landing-hamburger" onClick={() => setMobileMenu((v) => !v)} aria-label="Menu" style={{ fontSize: 24, background: "none", border: "none", cursor: "pointer", padding: "4px 8px" }}>{mobileMenu ? "X" : "☰"}</button>
+              <img src={LOGO} alt="Ledgerwatch" style={{ height: 30, width: "auto", objectFit: "contain", cursor: "pointer", display: "block" }} onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} />
+              <div className="landing-nav-links" style={{ display: "flex", alignItems: "center", gap: 20 }}>
+                <button onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })}>Features</button>
+                <button onClick={() => document.getElementById("how")?.scrollIntoView({ behavior: "smooth" })}>How it works</button>
+                <button onClick={() => document.getElementById("faq")?.scrollIntoView({ behavior: "smooth" })}>FAQ</button>
+              </div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+              <button onClick={() => setDarkMode((v) => !v)} className="pill-btn">{darkMode ? "Light" : "Dark"}</button>
+              {user ? <button onClick={() => setView("app")} className="primary-pill">Back to App ({user.name})</button> : <><button onClick={() => openAuth("login")} className="pill-btn">Log In</button><button onClick={() => openAuth("signup")} className="primary-pill">Start Free</button></>}
+            </div>
+          </nav>
+        </header>
 Features</button>
             <button onClick={() => document.getElementById("how")?.scrollIntoView({ behavior: "smooth" })}>How it works</button>
             <button onClick={() => document.getElementById("faq")?.scrollIntoView({ behavior: "smooth" })}>FAQ</button>
