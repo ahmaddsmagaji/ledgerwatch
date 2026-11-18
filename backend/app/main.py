@@ -1,6 +1,8 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
+from app.admin_routes import router as admin_router
+
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -21,6 +23,7 @@ def create_app() -> FastAPI:
         description="Payment reconciliation and exception review. Demo build: synthetic data only, no authentication.",
         lifespan=lifespan,
     )
+    app.include_router(admin_router)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=[

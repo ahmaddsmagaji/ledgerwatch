@@ -31,6 +31,7 @@ const menu = [
   { id: "integrations", label: "Integrations", icon: "↗" },
   { id: "reports", label: "Reports", icon: "▤" },
   { id: "settings", label: "Settings", icon: "⚙" },
+  { id: "admin", label: "Admin", icon: "🛡" },
 ];
 
 const PLANS = [
@@ -139,6 +140,9 @@ export default function App() {
   const [showDelete, setShowDelete] = useState(false);
   const [adminMsg, setAdminMsg] = useState("");
   const [adminUsers, setAdminUsers] = useState<Record<string, User & { password: string }>>({});
+  const [adminHealth, setAdminHealth] = useState<any>(null);
+  const [adminToken, setAdminToken] = useState(() => localStorage.getItem("lw_admin_token") || "");
+  const [adminBackendMsg, setAdminBackendMsg] = useState("");
   const isAdmin = user?.email?.toLowerCase() === ADMIN_EMAIL;
 
   useEffect(() => { document.body.classList.toggle("dark-mode", darkMode); localStorage.setItem("lw_dark", darkMode ? "1" : "0"); }, [darkMode]);
@@ -242,6 +246,15 @@ export default function App() {
     } finally { setBillingLoading(false); }
   };
   const loadAdminUsers = () => { setAdminUsers(getUsers()); };
+  const loadAdminBackend = async () => {
+    if (!adminToken) { setAdminBackendMsg("Enter Admin Token first (from Render ENV). It is not saved in code."); return; }
+    try {
+      const r = await fetch(`${API_URL}/api/admin/health`, { headers: { "X-Admin-Token": adminToken } });
+      const d = await r.json();
+      if (!r.ok) { setAdminBackendMsg("Backend admin denied: " + (d.detail || r.status)); return; }
+      setAdminHealth(d); localStorage.setItem("lw_admin_token", adminToken); setAdminBackendMsg("Backend admin connected ✓");
+    } catch { setAdminBackendMsg("Cannot reach backend admin. Is Render up?"); }
+  };
   const adminResetPw = (email: string) => {
     const users = getUsers(); if (!users[email]) return;
     users[email] = { ...users[email], password: "123456" }; localStorage.setItem("lw_users", JSON.stringify(users)); setAdminUsers(users); setAdminMsg(`Reset ${email} to 123456`);
@@ -445,7 +458,7 @@ export default function App() {
       <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
         <div className="sidebar-brand"><div className="logo-wrap"><span className="logo-fallback">L</span><img src={LOGO} alt="Ledgerwatch" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} /></div><div><strong>Ledgerwatch</strong><small>{workspaceName}</small></div><button className="close-btn" onClick={() => setSidebarOpen(false)}>X</button></div>
         <p className="menu-title">MENU</p>
-        <nav>{menu.map((m) => (<button key={m.id} className={`nav-item ${page === m.id ? "active" : ""}`} onClick={() => { setPage(m.id); setSidebarOpen(false); setSearch(""); setStatusFilter("All"); setChannelFilter("All"); setShowAccountMenu(false); }}><span className="nav-icon">{m.icon}</span> {m.label}{m.id === "exceptions" && <span className="badge">{openExceptions.length}</span>}</button>))}</nav>
+        <nav>{menu.filter((m) => m.id !== "admin" || isAdmin).map((m) => (<button key={m.id} className={`nav-item ${page === m.id ? "active" : ""}`} onClick={() => { setPage(m.id); setSidebarOpen(false); setSearch(""); setStatusFilter("All"); setChannelFilter("All"); setShowAccountMenu(false); }}><span className="nav-icon">{m.icon}</span> {m.label}{m.id === "exceptions" && <span className="badge">{openExceptions.length}</span>}</button>))}</nav>
         <div className="sidebar-footer"><p>Sync. Reconcile. Resolve.</p><small>Ledgerwatch does not move money.</small><button onClick={logout} style={{ marginTop: 12, width: "100%", background: "#ffffff", border: "none", borderRadius: 999, padding: "10px 12px", cursor: "pointer", fontWeight: 800, fontSize: 14, color: "#2E1065" }}>Log out</button><button onClick={() => setView("landing")} style={{ marginTop: 10, width: "100%", background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "#C4B5FD", textDecoration: "underline" }}>← Back to website</button></div>
       </aside>
       {sidebarOpen && <div className="overlay" onClick={() => setSidebarOpen(false)} />}
@@ -543,6 +556,22 @@ export default function App() {
               {reportMsg && <p className="success-box">{reportMsg}</p>}
               <div className="panel"><h3>Reconciliation Report — {workspaceName} · {reportPeriod}</h3><p className="note">Generated {new Date().toLocaleString()} · Run REC-2026-104 · Ledgerwatch does not move money.</p><div className="cards"><div className="card"><span>COLLECTED (INTERNAL)</span><strong>{fmt(overview.total_value)}</strong><small>{fmtInt(overview.transactions)} transactions</small></div><div className="card"><span>RECEIVED (SETTLEMENTS)</span><strong>{fmt(overview.settlements_received)}</strong><small>Net after fees</small></div><div className="card"><span>FLAGGED</span><strong>{fmt(overview.flagged_total)}</strong><small>{fmtInt(overview.flagged_count)} exceptions</small></div><div className="card"><span>RECONCILIATION RATE</span><strong>{n(overview.reconciliation_rate)}%</strong><small>{fmtInt(openExceptions.length)} open · {fmtInt(resolvedList.length)} resolved</small></div></div><h4>By Exception Type</h4>{asArray<BreakdownItem>(overview.breakdown).map((b) => (<div className="row" key={b.label}><div><strong>{b.label}</strong> <span>· {fmtInt(b.count)} · {b.pct}</span></div><strong>{fmt(b.amount)}</strong></div>))}<h4>What this means</h4><p>If Collected ≠ Received, the difference is in Exceptions. Resolve each exception with a reason + note, and the Audit Trail proves what you did. No mismatch is called fraud — only needs investigation.</p><div className="wizard-actions"><button className="secondary-btn" onClick={() => downloadCSV("Exceptions")}>Export Exceptions</button><button className="secondary-btn" onClick={() => downloadCSV("Transactions")}>Export Transactions</button><button className="primary-btn" onClick={downloadReport}>Download Full Report</button></div></div>
               <div className="panel" style={{ marginTop: 16 }}><h3>Audit Trail (this session)</h3>{audit.map((a, i) => (<div className="audit-row" key={i}><small>{a.time} · {a.by}</small><span>{a.action}</span></div>))}</div>
+            </>
+          )}
+          {page === "admin" && isAdmin && (
+            <>
+              <p className="hero-sub">Private Admin Console — only dsahmadmagaji@gmail.com. Backend enforces access.</p>
+              <div className="panel"><h3>SYSTEM OVERVIEW</h3>
+                <label className="field">Admin Token (from Render ENV, not in code)<input type="password" value={adminToken} onChange={(e) => setAdminToken(e.target.value)} placeholder="Paste ADMIN_TOKEN from Render" /></label>
+                <button className="primary-btn" onClick={loadAdminBackend}>Connect to Backend Admin</button>
+                {adminBackendMsg && <p className="success-box">{adminBackendMsg}</p>}
+                {adminHealth && <div style={{ marginTop: 12, fontSize: 14 }}><div><b>App:</b> {adminHealth.app}</div><div><b>Env:</b> {adminHealth.env}</div><div><b>Backend:</b> {adminHealth.backend}</div><div><b>Database:</b> {adminHealth.database}</div><div><b>Time:</b> {adminHealth.time}</div></div>}
+              </div>
+              <div className="panel" style={{ marginTop: 16 }}><h3>USERS (This device - Stage 1)</h3><p className="note">Stage 1 shows users saved on this device. Stage 2 will show real backend users from database.</p>
+                <button className="secondary-btn" onClick={loadAdminUsers}>Load Users ({Object.keys(getUsers()).length})</button>{adminMsg && <p className="success-box">{adminMsg}</p>}
+                {Object.entries(adminUsers).map(([email, u]) => (<div key={email} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderTop: "1px solid #EAECF0", flexWrap: "wrap", gap: 8 }}><div><b>{u.name}</b><div style={{ fontSize: 12, color: "#667085" }}>{email} · {u.business} · {u.phone}</div></div><div style={{ display: "flex", gap: 8 }}><button onClick={() => adminResetPw(email)} className="secondary-btn" style={{ padding: "8px 12px" }}>Reset to 123456</button><button onClick={() => adminDeleteUser(email)} style={{ padding: "8px 12px", borderRadius: 10, border: "1px solid #FECDCA", background: "#FEF3F2", color: "#B42318", cursor: "pointer" }}>Delete</button></div></div>))}
+              </div>
+              <div className="panel" style={{ marginTop: 16 }}><h3>AUDIT TRAIL</h3><p className="note">Stage 2 will log every admin action to backend audit table. For now, actions are in Recent Activity on Overview.</p>{audit.slice(0, 10).map((a, i) => (<div className="audit-row" key={i}><small>{a.time} · {a.by}</small><span>{a.action}</span></div>))}</div>
             </>
           )}
           {page === "settings" && (
