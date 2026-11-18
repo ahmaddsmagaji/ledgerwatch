@@ -255,7 +255,7 @@ body.dark-mode .landing-hero p { color: #94a3b8; }
   .lw-hamburger-always { display: none !important; } /* hamburger only on phone, like Upwork */
 }
 
-/* Brand: icon + Ledgerwatch text like KoboSync */
+/* Brand: icon + Ledgerwatch text like LedgerWatch */
 .lw-brand-text { font-family: Inter, system-ui, sans-serif; }
 @media (max-width: 700px) {
   .lw-brand-text { font-size: 18px !important; }
@@ -264,3 +264,8 @@ body.dark-mode .landing-hero p { color: #94a3b8; }
 @media (min-width: 701px) {
   .landing-header img { height: 48px !important; }
 }
+
+/* LedgerWatch wordmark beside icon */
+.lw-wordmark { font-size: 20px; font-weight: 800; letter-spacing: -0.3px; color: #131118; margin-left: 8px; white-space: nowrap; }
+.lw-wordmark span { color: #5B0DBA; }
+@media (max-width: 640px) { .lw-wordmark { font-size: 17px; } }

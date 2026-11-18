@@ -59,7 +59,7 @@ function getUsers(): Record<string, User & { password: string }> { try { return 
 function getSession(): User | null { try { return JSON.parse(localStorage.getItem("lw_session") || "null"); } catch { return null; } }
 function GoogleIcon() { return <span style={{ width: 18, height: 18, borderRadius: "50%", background: "#fff", border: "1px solid #e2e8f0", display: "inline-flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 13, color: "#4285F4", flexShrink: 0 }}>G</span>; }
 function LogoImg({ size = 40, radius = 10 }: { size?: number; radius?: number }) { return <div style={{ width: size, height: size, borderRadius: radius, overflow: "hidden", background: "#000", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", flexShrink: 0 }} onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
-                <img src={LOGO} alt="Ledgerwatch" style={{ height: 48, width: "auto", minWidth: 44, objectFit: "contain", display: "block" }} />
+                <img src={LOGO} alt="Ledgerwatch" style={{ height: 48, width: "auto", minWidth: 44, objectFit: "contain", display: "block" }} /><span className="lw-wordmark">Ledger<span style={{ color: "#5B0DBA" }}>Watch</span></span>
                 <span style={{ fontSize: 21, fontWeight: 800, letterSpacing: -0.5, color: "#1A1A1A", whiteSpace: "nowrap" }}>Ledgerwatch</span>
               </span></div>; }
 function mapSummary(s: any): OverviewData {
@@ -585,7 +585,7 @@ export default function App() {
           )}
           {page === "settings" && (
             <>
-              <p className="hero-sub">Manage your account and preferences. — KoboSync-style, one card per idea.</p>
+              <p className="hero-sub">Manage your account and preferences. — LedgerWatch-style, one card per idea.</p>
               {settingsMsg && <p className="success-box">{settingsMsg}</p>}
               <div className="panel"><h3>PROFILE</h3><p className="note">Manage your account information.</p><label className="field">Email address<input value={user?.email || ""} disabled /></label><p className="note">Your account email is managed by your sign-in provider and cannot be changed here.</p><label className="field">Workspace / Business name<input value={workspaceName} onChange={(e) => setWorkspaceName(e.target.value)} placeholder="Demo Commerce Ltd" /></label><label className="field">Currency<select value={currency} onChange={(e) => setCurrency(e.target.value)}><option>NGN (₦)</option><option>USD ($)</option><option>GBP (£)</option></select></label></div>
               <div className="panel" style={{ marginTop: 16 }}><h3>WHATSAPP ASSISTANT</h3><p className="note">Link your number to message Ledgerwatch on WhatsApp. You&apos;ll send a one-time code from the number you want to link.</p>
