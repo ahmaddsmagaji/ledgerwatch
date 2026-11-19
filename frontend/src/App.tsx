@@ -86,7 +86,31 @@ function mapExceptions(d: any): Exc[] {
 }
 
 export default function App() {
-  const [view, setView] = useState<"landing" | "auth" | "app">(() => (getSession() ? "app" : "landing"));
+  
+  // GOOGLE_REDIRECT_HANDLER - reads Google OAuth redirect result (phone + laptop)
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash && hash.includes("id_token=")) {
+      try {
+        const params = new URLSearchParams(hash.substring(1));
+        const idToken = params.get("id_token");
+        if (idToken) {
+          const payload = JSON.parse(atob(idToken.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+          const session: User = { name: payload.name || "Google User", email: payload.email, phone: "", business: "My Business" };
+          const users = getUsers();
+          if (!users[payload.email]) {
+            users[payload.email] = { ...session, password: "" };
+            localStorage.setItem("lw_users", JSON.stringify(users));
+          }
+          setUser(session);
+          localStorage.setItem("lw_session", JSON.stringify({ email: payload.email }));
+          setView("app");
+          window.history.replaceState({}, "", window.location.pathname);
+        }
+      } catch {}
+    }
+  }, []);
+\nconst [view, setView] = useState<"landing" | "auth" | "app">(() => (getSession() ? "app" : "landing"));
   const [authMode, setAuthMode] = useState<"login" | "signup">("signup");
   const [user, setUser] = useState<User | null>(() => getSession());
   const [form, setForm] = useState({ name: "", email: "", phone: "", business: "", password: "" });
@@ -164,23 +188,15 @@ export default function App() {
 
   const openAuth = (mode: "login" | "signup") => { setAuthMode(mode); setAuthError(""); setShowForgot(false); setMobileMenu(false); setView("auth"); };
   const handleGoogle = () => {
-    const cid = (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID;
-    if (!cid) { setAuthError("To enable real Google login: add VITE_GOOGLE_CLIENT_ID in Vercel → Settings → Environment Variables, then redeploy. Get it free from console.cloud.google.com → Credentials → OAuth Client ID."); return; }
-    setAuthError("Opening Google login...");
-    const s = document.createElement("script"); s.src = "https://accounts.google.com/gsi/client"; s.async = true;
-    s.onload = () => {
-      // @ts-ignore
-      window.google.accounts.id.initialize({ client_id: cid, callback: (res: any) => {
-        try {
-          const payload = JSON.parse(atob(res.credential.split(".")[1]));
-          const session: User = { name: payload.name || "Google User", email: payload.email, phone: "", business: "My Business" };
-          localStorage.setItem("lw_session", JSON.stringify(session));
-          setUser(session); setWorkspaceName("My Business"); setView("app");
-        } catch { setAuthError("Google login failed. Try email login."); }
-      }});
-      // @ts-ignore
-      window.google.accounts.id.prompt();
-    };
+    const cid = (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID || "";
+    if (!cid) { setAuthError("To enable real Google login: add VITE_GOOGLE_CLIENT_ID in Vercel → Settings → Environment Variables, then redeploy."); return; }
+    const redirectUri = window.location.origin + "/";
+    const nonce = Math.random().toString(36).substring(2) + Date.now().toString(36);
+    sessionStorage.setItem("lw_google_nonce", nonce);
+    const params = new URLSearchParams({ client_id: cid, redirect_uri: redirectUri, response_type: "id_token", scope: "openid email profile", nonce: nonce, prompt: "select_account" });
+    setAuthError("Redirecting to Google...");
+    window.location.href = "https://accounts.google.com/o/oauth2/v2/auth?" + params.toString();
+  };
     document.head.appendChild(s);
   };
   const handleAuth = (e: React.FormEvent) => {
