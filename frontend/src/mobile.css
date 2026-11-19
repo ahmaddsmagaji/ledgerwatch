@@ -1,0 +1,93 @@
+/* LedgerWatch Mobile-First - PC unchanged, only <=768px changes */
+@media (max-width: 768px) {
+    * { box-sizing: border-box; }
+  body { background: #F9FAFB !important; overflow-x: hidden !important; }
+
+  /* Header - compact, not crowded */
+  header, .topbar, .header { padding: 10px 12px !important; gap: 8px !important; }
+  header h1, .topbar h1 { font-size: 19px !important; }
+
+  /* Main - tight, balanced */
+  main, .main, .content, .page { padding: 12px 12px 28px !important; }
+
+  /* Page title - smaller, not shouting */
+  h1 { font-size: 24px !important; line-height: 1.15 !important; letter-spacing: -0.02em !important; margin: 0 0 6px !important; }
+  h2 { font-size: 19px !important; margin: 0 0 6px !important; }
+  h3 { font-size: 16px !important; }
+  p { font-size: 14px !important; line-height: 1.55 !important; }
+
+  /* Search - full width, compact */
+  input[type="text"], input[type="search"] { font-size: 15px !important; }
+
+  /* KPI CARDS - 2 per row, compact, no huge empty space */
+  /* Overview KPI grid: make it 2-col so cards are short, not tall empty boxes */
+  .panel { padding: 14px !important; border-radius: 16px !important; background: #fff !important; border: 1px solid #EAECF0 !important; box-shadow: 0 1px 3px rgba(16,24,40,.05) !important; margin-bottom: 12px !important; }
+  .panel p { margin: 0 0 6px !important; }
+  /* Any div with grid-template-columns repeat(4...) or repeat(3...) -> 2 cols on mobile */
+  div[style*="grid-template-columns"] { grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
+  /* KPI value - smaller, tighter */
+  .panel b { font-size: 22px !important; line-height: 1.1 !important; }
+  /* Kill the huge empty gap inside KPI cards - it was min-height / padding */
+  .panel > div { min-height: 0 !important; }
+
+  /* OVERVIEW BUTTONS - stack, not squeezed side-by-side */
+  /* Import + View reconciliation were side-by-side and cramped - stack them */
+  div[style*="display: flex"][style*="gap"] { flex-wrap: wrap !important; }
+  .primary-btn, button.primary-btn { width: 100% !important; padding: 13px !important; font-size: 15px !important; border-radius: 12px !important; }
+  .secondary-btn, button.secondary-btn { width: 100% !important; padding: 12px !important; border-radius: 12px !important; }
+
+  /* STEPS - 1 Upload / 2 Run / 3 Results - scroll, not squeeze */
+  /* They were squeezed in one row - let them scroll */
+  div[style*="display: flex"] { flex-wrap: wrap !important; }
+
+  /* FILTERS - THE BIG FIX: left-align, stack, no empty space */
+  .filters {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    min-height: 0 !important;
+  }
+  .filters label { width: 100% !important; display: flex !important; flex-direction: column !important; align-items: flex-start !important; gap: 6px !important; margin: 0 !important; text-align: left !important; }
+  .filters label span { text-align: left !important; }
+  .filters select, .filters input { width: 100% !important; padding: 11px 12px !important; font-size: 15px !important; border-radius: 10px !important; }
+  .filters button { width: 100% !important; margin-top: 2px !important; }
+  /* Any filter panel that had a big empty div - collapse it */
+  .panel > div:empty { display: none !important; }
+
+  /* TABLES - THE SECOND BIG FIX: never squeeze, scroll sideways */
+  .panel:has(table) { overflow-x: auto !important; padding: 0 !important; }
+  .panel:has(table) > div { overflow-x: auto !important; }
+  table { min-width: 680px !important; width: max-content !important; border-collapse: collapse !important; }
+  th {
+    white-space: nowrap !important;
+    word-break: keep-all !important;
+    overflow-wrap: normal !important;
+    font-size: 11.5px !important;
+    letter-spacing: .05em !important;
+    padding: 11px 14px !important;
+    text-align: left !important;
+  }
+  td { white-space: nowrap !important; padding: 11px 14px !important; font-size: 14px !important; }
+  td:nth-child(2) { white-space: normal !important; max-width: 180px !important; }
+
+  /* SETTINGS / INTEGRATIONS / EXPORT - compact */
+  .panel > div[style*="display: flex"][style*="justify-content: space-between"] {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+  /* Available pill - left, not full width */
+  .panel span { max-width: 100% !important; }
+  /* Dataset dropdown in Google Sheets Export - left, full width, no empty space */
+  label { width: 100% !important; }
+  label select { width: 100% !important; }
+
+  /* ₦ SYMBOL - stop it looking like strikethrough */
+  /* ₦ has 2 lines in the glyph - make it clean with system font + no decoration */
+  b, span, td, div { text-decoration: none !important; }
+  .panel b { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; letter-spacing: -0.01em !important; }
+}

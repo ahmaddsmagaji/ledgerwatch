@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import "./App.css";
 import AdminConsole from "./AdminConsole";
+import "./mobile.css";
 
 const API_URL = "https://ledgerwatch-backend-v2.onrender.com";
 const PURPLE = "#5B0DBA";
