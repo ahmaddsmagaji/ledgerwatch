@@ -86,8 +86,7 @@ function mapExceptions(d: any): Exc[] {
 }
 
 export default function App() {
-  
-  // GOOGLE_REDIRECT_HANDLER - reads Google OAuth redirect result (phone + laptop)
+    // GOOGLE_REDIRECT_HANDLER - reads Google OAuth redirect result (phone + laptop)
   useEffect(() => {
     const hash = window.location.hash;
     if (hash && hash.includes("id_token=")) {
@@ -110,7 +109,7 @@ export default function App() {
       } catch {}
     }
   }, []);
-\nconst [view, setView] = useState<"landing" | "auth" | "app">(() => (getSession() ? "app" : "landing"));
+const [view, setView] = useState<"landing" | "auth" | "app">(() => (getSession() ? "app" : "landing"));
   const [authMode, setAuthMode] = useState<"login" | "signup">("signup");
   const [user, setUser] = useState<User | null>(() => getSession());
   const [form, setForm] = useState({ name: "", email: "", phone: "", business: "", password: "" });
@@ -196,8 +195,6 @@ export default function App() {
     const params = new URLSearchParams({ client_id: cid, redirect_uri: redirectUri, response_type: "id_token", scope: "openid email profile", nonce: nonce, prompt: "select_account" });
     setAuthError("Redirecting to Google...");
     window.location.href = "https://accounts.google.com/o/oauth2/v2/auth?" + params.toString();
-  };
-    document.head.appendChild(s);
   };
   const handleAuth = (e: React.FormEvent) => {
     e.preventDefault(); setAuthError("");
