@@ -147,11 +147,9 @@ export default function App() {
   const [briefingTone, setBriefingTone] = useState("Merchant style");
   const [waBriefingOn, setWaBriefingOn] = useState(true);
   const [showDelete, setShowDelete] = useState(false);
-  const [adminMsg, setAdminMsg] = useState("");
+  const [adminMsg] = useState("");
   const [adminUsers, setAdminUsers] = useState<Record<string, User & { password: string }>>({});
-  const [adminHealth, setAdminHealth] = useState<any>(null);
-  const [adminToken, setAdminToken] = useState(() => localStorage.getItem("lw_admin_token") || "");
-  const [adminBackendMsg, setAdminBackendMsg] = useState("");
+  const [adminToken] = useState(() => localStorage.getItem("lw_admin_token") || "");
   const isAdmin = user?.email?.toLowerCase() === ADMIN_EMAIL;
 
   useEffect(() => { document.body.classList.toggle("dark-mode", darkMode); localStorage.setItem("lw_dark", darkMode ? "1" : "0"); }, [darkMode]);
@@ -255,24 +253,7 @@ export default function App() {
     } finally { setBillingLoading(false); }
   };
   const loadAdminUsers = () => { setAdminUsers(getUsers()); };
-  const loadAdminBackend = async () => {
-    if (!adminToken) { setAdminBackendMsg("Enter Admin Token first (from Render ENV). It is not saved in code."); return; }
-    try {
-      const r = await fetch(`${API_URL}/api/admin/health`, { headers: { "X-Admin-Token": adminToken } });
-      const d = await r.json();
-      if (!r.ok) { setAdminBackendMsg("Backend admin denied: " + (d.detail || r.status)); return; }
-      setAdminHealth(d); localStorage.setItem("lw_admin_token", adminToken); setAdminBackendMsg("Backend admin connected ✓");
-    } catch { setAdminBackendMsg("Cannot reach backend admin. Is Render up?"); }
-  };
-  const adminResetPw = (email: string) => {
-    const users = getUsers(); if (!users[email]) return;
-  // REMOVED: fake localStorage reset to [REMOVED - use backend Admin reset] - real reset is via backend AdminConsole
-  };
-  const adminDeleteUser = (email: string) => {
-    if (email.toLowerCase() === ADMIN_EMAIL) { setAdminMsg("Cannot delete admin."); return; }
-  // REMOVED: fake localStorage delete - real admin uses deactivation via backend
-  };
-  const runReconciliation = async () => {
+        const runReconciliation = async () => {
     setReconLoading(true); setReconError("");
     try {
       const res = await fetch(`${API_URL}/api/reconcile`, { method: "POST" });
