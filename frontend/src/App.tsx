@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import "./App.css";
+import AdminConsole from "./AdminConsole";
 
 const API_URL = "https://ledgerwatch-backend-v2.onrender.com";
 const PURPLE = "#5B0DBA";
@@ -212,9 +213,9 @@ export default function App() {
     const email = forgotEmail.trim().toLowerCase();
     const users = getUsers();
     if (!users[email]) { setForgotMsg("No account with that email. Create an account first."); return; }
-    users[email] = { ...users[email], password: "123456" };
+  // REMOVED: fake localStorage reset to [REMOVED - use backend Admin reset] - real reset is via backend AdminConsole
     localStorage.setItem("lw_users", JSON.stringify(users));
-    setForgotMsg("Password reset to 123456. Log in with 123456, then change it in Settings → Change Password.");
+    setForgotMsg("Password reset is handled by Admin via backend - contact Admin for a reset link.");
   };
   const handleChangePassword = () => {
     if (!user) return;
@@ -228,7 +229,7 @@ export default function App() {
   const logout = () => { localStorage.removeItem("lw_session"); setUser(null); setShowAccountMenu(false); setView("landing"); };
   const goSettings = () => { setShowAccountMenu(false); setPage("settings"); setSidebarOpen(false); };
   const generateWaCode = () => {
-    if (!waNumber.trim()) { setWaMsg("Enter WhatsApp number first, e.g. +2348012345678"); return; }
+    if (!waNumber.trim()) { setWaMsg("Enter WhatsApp number first, e.g. +23480[REMOVED - use backend Admin reset]78"); return; }
     const code = String(Math.floor(100000 + Math.random() * 900000));
     setWaGenerated(code); localStorage.setItem("lw_wa_number", waNumber);
     setWaMsg(`Your one-time code is ${code}. In live mode we send this via WhatsApp Cloud API. For demo, enter it below to link.`);
@@ -265,11 +266,11 @@ export default function App() {
   };
   const adminResetPw = (email: string) => {
     const users = getUsers(); if (!users[email]) return;
-    users[email] = { ...users[email], password: "123456" }; localStorage.setItem("lw_users", JSON.stringify(users)); setAdminUsers(users); setAdminMsg(`Reset ${email} to 123456`);
+  // REMOVED: fake localStorage reset to [REMOVED - use backend Admin reset] - real reset is via backend AdminConsole
   };
   const adminDeleteUser = (email: string) => {
     if (email.toLowerCase() === ADMIN_EMAIL) { setAdminMsg("Cannot delete admin."); return; }
-    const users = getUsers(); delete users[email]; localStorage.setItem("lw_users", JSON.stringify(users)); setAdminUsers(users); setAdminMsg(`Deleted ${email}`);
+  // REMOVED: fake localStorage delete - real admin uses deactivation via backend
   };
   const runReconciliation = async () => {
     setReconLoading(true); setReconError("");
@@ -586,30 +587,16 @@ export default function App() {
             </>
           )}
           {page === "admin" && isAdmin && (
-            <>
-              <h1 className="page-h1">Admin</h1>
-              <p className="hero-sub">Private Admin Console — only dsahmadmagaji@gmail.com. Backend enforces access.</p>
-              <div className="panel"><h3>SYSTEM OVERVIEW</h3>
-                <label className="field">Admin Token (from Render ENV, not in code)<input type="password" value={adminToken} onChange={(e) => setAdminToken(e.target.value)} placeholder="Paste ADMIN_TOKEN from Render" /></label>
-                <button className="primary-btn" onClick={loadAdminBackend}>Connect to Backend Admin</button>
-                {adminBackendMsg && <p className="success-box">{adminBackendMsg}</p>}
-                {adminHealth && <div style={{ marginTop: 12, fontSize: 14 }}><div><b>App:</b> {adminHealth.app}</div><div><b>Env:</b> {adminHealth.env}</div><div><b>Backend:</b> {adminHealth.backend}</div><div><b>Database:</b> {adminHealth.database}</div><div><b>Time:</b> {adminHealth.time}</div></div>}
-              </div>
-              <div className="panel" style={{ marginTop: 16 }}><h3>USERS (This device - Stage 1)</h3><p className="note">Stage 1 shows users saved on this device. Stage 2 will show real backend users from database.</p>
-                <button className="secondary-btn" onClick={loadAdminUsers}>Load Users ({Object.keys(getUsers()).length})</button>{adminMsg && <p className="success-box">{adminMsg}</p>}
-                {Object.entries(adminUsers).map(([email, u]) => (<div key={email} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderTop: "1px solid #EAECF0", flexWrap: "wrap", gap: 8 }}><div><b>{u.name}</b><div style={{ fontSize: 12, color: "#667085" }}>{email} · {u.business} · {u.phone}</div></div><div style={{ display: "flex", gap: 8 }}><button onClick={() => adminResetPw(email)} className="secondary-btn" style={{ padding: "8px 12px" }}>Reset to 123456</button><button onClick={() => adminDeleteUser(email)} style={{ padding: "8px 12px", borderRadius: 10, border: "1px solid #FECDCA", background: "#FEF3F2", color: "#B42318", cursor: "pointer" }}>Delete</button></div></div>))}
-              </div>
-              <div className="panel" style={{ marginTop: 16 }}><h3>AUDIT TRAIL</h3><p className="note">Stage 2 will log every admin action to backend audit table. For now, actions are in Recent Activity on Overview.</p>{audit.slice(0, 10).map((a, i) => (<div className="audit-row" key={i}><small>{a.time} · {a.by}</small><span>{a.action}</span></div>))}</div>
-            </>
-          )}
-          {page === "settings" && (
+          <AdminConsole apiUrl={API_URL} adminToken={adminToken} />
+        )}
+        {page === "settings" && (
             <>
               <h1 className="page-h1">Settings</h1>
               <p className="hero-sub">Manage your account and preferences.</p>
               {settingsMsg && <p className="success-box">{settingsMsg}</p>}
               <div className="panel"><h3>PROFILE</h3><p className="note">Manage your account information.</p><label className="field">Email address<input value={user?.email || ""} disabled /></label><p className="note">Your account email is managed by your sign-in provider and cannot be changed here.</p><label className="field">Workspace / Business name<input value={workspaceName} onChange={(e) => setWorkspaceName(e.target.value)} placeholder="Demo Commerce Ltd" /></label><label className="field">Currency<select value={currency} onChange={(e) => setCurrency(e.target.value)}><option>NGN (₦)</option><option>USD ($)</option><option>GBP (£)</option></select></label></div>
               <div className="panel" style={{ marginTop: 16 }}><h3>WHATSAPP ASSISTANT</h3><p className="note">Link your number to message Ledgerwatch on WhatsApp. You&apos;ll send a one-time code from the number you want to link.</p>
-                {waLinked ? <div style={{ marginTop: 12, background: "#ECFDF3", border: "1px solid #ABEFC6", borderRadius: 12, padding: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }}><div><b>Linked ✓ {waNumber}</b><div style={{ fontSize: 12, color: "#667085" }}>Daily briefings will go here when enabled.</div></div><button onClick={unlinkWa} className="secondary-btn">Unlink</button></div> : <><label className="field">WhatsApp number<input value={waNumber} onChange={(e) => setWaNumber(e.target.value)} placeholder="+2348012345678" /></label><p className="note">Include country code. Used for WhatsApp briefings on eligible plans.</p><div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}><button onClick={generateWaCode} className="primary-btn" style={{ background: PURPLE }}>Link WhatsApp</button><input value={waCode} onChange={(e) => setWaCode(e.target.value)} placeholder="Enter 6-digit code" style={{ padding: 11, borderRadius: 10, border: "1px solid #D0D5DD", width: 160 }} /><button onClick={verifyWaCode} className="secondary-btn">Verify Code</button></div>{waMsg && <div style={{ fontSize: 13, color: "#067647", marginTop: 10, background: "#ECFDF3", padding: 10, borderRadius: 10 }}>{waMsg}</div>}</>}
+                {waLinked ? <div style={{ marginTop: 12, background: "#ECFDF3", border: "1px solid #ABEFC6", borderRadius: 12, padding: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }}><div><b>Linked ✓ {waNumber}</b><div style={{ fontSize: 12, color: "#667085" }}>Daily briefings will go here when enabled.</div></div><button onClick={unlinkWa} className="secondary-btn">Unlink</button></div> : <><label className="field">WhatsApp number<input value={waNumber} onChange={(e) => setWaNumber(e.target.value)} placeholder="+23480[REMOVED - use backend Admin reset]78" /></label><p className="note">Include country code. Used for WhatsApp briefings on eligible plans.</p><div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}><button onClick={generateWaCode} className="primary-btn" style={{ background: PURPLE }}>Link WhatsApp</button><input value={waCode} onChange={(e) => setWaCode(e.target.value)} placeholder="Enter 6-digit code" style={{ padding: 11, borderRadius: 10, border: "1px solid #D0D5DD", width: 160 }} /><button onClick={verifyWaCode} className="secondary-btn">Verify Code</button></div>{waMsg && <div style={{ fontSize: 13, color: "#067647", marginTop: 10, background: "#ECFDF3", padding: 10, borderRadius: 10 }}>{waMsg}</div>}</>}
                 <div style={{ marginTop: 18, borderTop: "1px solid #EAECF0", paddingTop: 16 }}><b>DAILY BRIEFINGS</b><p className="note">Choose how often Ledgerwatch reports your numbers and the tone used.</p><div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}><label style={{ fontSize: 13 }}>Delivery frequency<select value={briefingFreq} onChange={(e) => setBriefingFreq(e.target.value)} style={{ display: "block", padding: 10, borderRadius: 10, border: "1px solid #D0D5DD", marginTop: 4 }}><option>Daily</option><option>Weekly</option><option>Off</option></select></label><label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}><input type="checkbox" checked={waBriefingOn} onChange={(e) => setWaBriefingOn(e.target.checked)} /> Send to WhatsApp</label></div><div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>{["Merchant style", "Ledger style"].map((t) => (<button key={t} onClick={() => setBriefingTone(t)} style={{ textAlign: "left", padding: 14, borderRadius: 12, border: briefingTone === t ? `2px solid ${PURPLE}` : "1px solid #D0D5DD", background: "#fff", cursor: "pointer" }}><b>{t}</b><div style={{ fontSize: 12, color: "#667085" }}>{t === "Merchant style" ? "Net profit, top customer, warm daily recap" : "Concise summary of transactions, fees, exceptions"}</div><div style={{ textAlign: "right" }}>{briefingTone === t ? "✓" : ""}</div></button>))}</div><div style={{ fontSize: 12, color: "#667085", marginTop: 10 }}>Example ({briefingTone}): {briefingTone === "Merchant style" ? "Good morning! Yesterday you collected ₦98,500, bank received ₦96,500. 1 exception needs your eye — ₦2,000 difference." : "Reconciliation: Collected ₦98,500 • Bank ₦96,500 • Exceptions 1 • Rate 96.4%"}</div></div>
               </div>
               <div className="panel" style={{ marginTop: 16 }}><h3>MATCHING RULES</h3><label className="field">Amount tolerance (₦)<input type="number" value={tolerance} onChange={(e) => setTolerance(e.target.value)} placeholder="0" /></label><label className="field">Date tolerance (days)<select value={dateTolerance} onChange={(e) => setDateTolerance(e.target.value)}><option>0</option><option>1</option><option>2</option><option>3</option><option>7</option></select></label><p className="note">Recommended: Amount ₦0 (exact kobo), Date 1 day (T+1 settlement).</p><label className="check"><input type="checkbox" checked={notifyEmail} onChange={(e) => setNotifyEmail(e.target.checked)} /> Email me a daily summary</label><label className="check"><input type="checkbox" checked={notifyNewExc} onChange={(e) => setNotifyNewExc(e.target.checked)} /> Alert me when a new exception appears</label><button className="primary-btn" onClick={saveSettings}>Save Settings</button></div>
@@ -620,7 +607,7 @@ export default function App() {
               <div className="panel" style={{ marginTop: 16 }}><h3>Change Password</h3><p><strong>{user?.name}</strong><br /><small>{user?.business} · {user?.email}</small></p><label className="field">Current password<input type="password" value={currentPw} onChange={(e) => setCurrentPw(e.target.value)} placeholder="Your current password" /></label><label className="field">New password (at least 6 characters)<input type="password" value={newPw} onChange={(e) => setNewPw(e.target.value)} placeholder="New password" /></label>{pwMsg && <p className={pwMsg.startsWith("Password") ? "success-box" : "error"}>{pwMsg}</p>}<button className="primary-btn" onClick={handleChangePassword}>Change Password</button></div>
               {isAdmin && (
                 <div className="panel" style={{ marginTop: 16, border: "2px solid #5B0DBA" }}><h3>ADMIN — User Management</h3><p className="note">Only visible to {ADMIN_EMAIL}. Fix user problems here.</p><button className="secondary-btn" onClick={loadAdminUsers}>Load Users ({Object.keys(getUsers()).length})</button>{adminMsg && <p className="success-box">{adminMsg}</p>}
-                  {Object.entries(adminUsers).map(([email, u]) => (<div key={email} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderTop: "1px solid #EAECF0", flexWrap: "wrap", gap: 8 }}><div><b>{u.name}</b><div style={{ fontSize: 12, color: "#667085" }}>{email} · {u.business} · {u.phone}</div></div><div style={{ display: "flex", gap: 8 }}><button onClick={() => adminResetPw(email)} className="secondary-btn" style={{ padding: "8px 12px" }}>Reset to 123456</button><button onClick={() => adminDeleteUser(email)} style={{ padding: "8px 12px", borderRadius: 10, border: "1px solid #FECDCA", background: "#FEF3F2", color: "#B42318", cursor: "pointer" }}>Delete</button></div></div>))}
+                  {Object.entries(adminUsers).map(([email, u]) => (<div key={email} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderTop: "1px solid #EAECF0", flexWrap: "wrap", gap: 8 }}><div><b>{u.name}</b><div style={{ fontSize: 12, color: "#667085" }}>{email} · {u.business} · {u.phone}</div></div><div style={{ display: "flex", gap: 8 }}><button onClick={() => undefined} className="secondary-btn" style={{ padding: "8px 12px" }}>Request backend reset</button><button onClick={() => undefined} style={{ padding: "8px 12px", borderRadius: 10, border: "1px solid #FECDCA", background: "#FEF3F2", color: "#B42318", cursor: "pointer" }}>Delete</button></div></div>))}
                 </div>
               )}
               <div className="panel" style={{ marginTop: 16, border: "1px solid #FECDCA" }}><h3 style={{ color: "#B42318" }}>DANGER ZONE</h3><p className="note">Manage account-level actions that may have permanent consequences.</p><div style={{ display: "flex", justifyContent: "space-between", marginTop: 12, alignItems: "center" }}><div><b>Sign out</b><div style={{ fontSize: 12, color: "#667085" }}>Sign out on this device. You can sign in again at any time.</div></div><button onClick={logout} className="secondary-btn">Sign out</button></div><div style={{ marginTop: 14, borderTop: "1px solid #EAECF0", paddingTop: 14 }}><b style={{ color: "#B42318" }}>Delete account</b><div style={{ fontSize: 12, color: "#667085" }}>Permanently deletes your account and workspace. This action cannot be undone.</div>{!showDelete ? <button onClick={() => setShowDelete(true)} style={{ marginTop: 10, padding: "9px 14px", borderRadius: 10, border: "1px solid #FECDCA", background: "#FEF3F2", color: "#B42318", cursor: "pointer" }}>Delete my account</button> : <div style={{ marginTop: 10, display: "flex", gap: 10 }}><button onClick={() => { localStorage.removeItem("lw_session"); localStorage.removeItem("lw_users"); setUser(null); setView("landing"); }} style={{ padding: "9px 14px", borderRadius: 10, border: "none", background: "#B42318", color: "#fff", cursor: "pointer" }}>Yes, delete permanently</button><button onClick={() => setShowDelete(false)} className="secondary-btn">Cancel</button></div>}</div></div>
