@@ -605,3 +605,77 @@ body.dark-mode .landing-hamburger{ color:#fff !important; }
   .panel, .card, .admin-card { padding: 12px 10px !important; }
   h1 { font-size: 22px !important; }
 }
+
+/* ===== Mobile Balance Fix - Product Details / Panels / Tables ===== */
+/* PC unchanged - these only apply on phone */
+
+@media (max-width: 768px) {
+  /* Page container - less padding on phone */
+  .app-shell, .main, .content, .page {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+  /* All panels/cards - tighter, no overflow */
+  .panel, .card, .admin-card {
+    padding: 14px !important;
+    border-radius: 12px !important;
+    overflow-x: hidden;
+  }
+  /* Any grid that was side-by-side on PC -> stack on phone */
+  [style*="grid-template-columns"],
+  .grid, .details-grid, .product-grid, .two-col, .filters {
+    grid-template-columns: 1fr !important;
+    flex-direction: column !important;
+    flex-wrap: wrap !important;
+  }
+  /* Flex rows that were space-between -> stack */
+  [style*="display: flex"] {
+    flex-wrap: wrap !important;
+  }
+  /* Headings - smaller on phone so they don't push content off */
+  h1 { font-size: 24px !important; line-height: 1.2 !important; }
+  h2 { font-size: 20px !important; }
+  h3 { font-size: 17px !important; }
+  /* Product details - labels above values, not side-by-side */
+  .detail-row, .product-detail, .kv {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 4px !important;
+  }
+  /* Tables - scroll inside card instead of breaking screen */
+  .table-wrap, .panel, .card {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  table {
+    min-width: 0 !important;
+    width: 100% !important;
+    font-size: 13px !important;
+  }
+  th, td {
+    padding: 8px 8px !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+  }
+  /* Buttons - full width on phone so they don't squeeze */
+  .primary-btn, .secondary-btn, button {
+    max-width: 100%;
+  }
+  .filters button, .panel button {
+    width: 100% !important;
+    margin-top: 8px !important;
+  }
+  /* Inputs - full width */
+  input, select, textarea {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  /* Hide horizontal scroll on body */
+  body { overflow-x: hidden; }
+}
+
+@media (max-width: 420px) {
+  .panel, .card, .admin-card { padding: 12px 10px !important; }
+  h1 { font-size: 22px !important; }
+}
