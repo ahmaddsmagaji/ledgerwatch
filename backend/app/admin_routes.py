@@ -13,6 +13,8 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 from sqlalchemy import text
+from passlib.context import CryptContext
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 from app.api.deps import get_db
 from app.models.tables import User, AuditEvent, PasswordReset
@@ -169,3 +171,23 @@ def admin_audit(_: bool = Depends(require_admin), db: Session = Depends(get_db),
     if actor:
         query = query.filter(AuditEvent.actor.ilike(f"%{actor}%"))
     return query.order_by(AuditEvent.created_at.desc()).offset(offset).limit(limit).all()
+
+@router.post("/bootstrap-once")
+def bootstrap_once(_: bool = Depends(require_admin), db: Session = Depends(get_db)):
+    # One-time bootstrap without Render Shell. Reads password from Render ENV only, never from request body.
+    # Safe: refuses if users table already has any user.
+    count = db.query(User).count()
+    if count > 0:
+        return {"status": "refused", "message": f"Users table already has {count} user(s). Bootstrap only runs when empty."}
+    email = os.getenv("BOOTSTRAP_ADMIN_EMAIL", "").strip().lower()
+    name = os.getenv("BOOTSTRAP_ADMIN_NAME", "Ahmad Magaji").strip()
+    password = os.getenv("BOOTSTRAP_ADMIN_PASSWORD", "")
+    if not email or not password:
+        raise HTTPException(status_code=500, detail="BOOTSTRAP_ADMIN_EMAIL / BOOTSTRAP_ADMIN_PASSWORD not set in Render ENV")
+    if len(password) < 12:
+        raise HTTPException(status_code=400, detail="Bootstrap password must be at least 12 characters")
+    user = User(name=name, email=email, password_hash=pwd_context.hash(password), role="super_admin", status="active", created_at=_utcnow(), last_activity_at=None)
+    db.add(user)
+    db.commit()
+    write_audit(db, SUPER_ADMIN_EMAIL, "bootstrap_super_admin", target=email, meta="first super admin created via bootstrap-once")
+    return {"status": "created", "email": email, "role": "super_admin"}
