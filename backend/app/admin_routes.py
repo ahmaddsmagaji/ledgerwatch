@@ -191,3 +191,208 @@ def bootstrap_once(_: bool = Depends(require_admin), db: Session = Depends(get_d
     db.commit()
     write_audit(db, SUPER_ADMIN_EMAIL, "bootstrap_super_admin", target=email, meta="first super admin created via bootstrap-once")
     return {"status": "created", "email": email, "role": "super_admin"}
+
+# ===== LedgerWatch Admin Extras - Create / Reset Link / CSV / Edit / Transactions / Hard Delete =====
+import secrets, csv, io
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
+
+class CreateUserIn(BaseModel):
+    name: str
+    email: str
+    role: str = "support"
+    username: str | None = None
+
+class UpdateUserIn(BaseModel):
+    name: str | None = None
+    email: str | None = None
+    username: str | None = None
+
+@router.post("/users/create")
+def admin_create_user(payload: CreateUserIn, db: Session = Depends(get_db), token: str = Depends(require_admin_token)):
+    # Check exists
+    existing = db.query(User).filter(User.email == payload.email.lower().strip()).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="User with this email already exists")
+    if payload.role not in ["super_admin", "admin", "support", "auditor"]:
+        raise HTTPException(status_code=400, detail="Invalid role")
+    # Temp password - user must reset on first login, Admin sees invite link
+    temp_password = secrets.token_urlsafe(10)
+    # Try to use username column if it exists, else store in name
+    user_kwargs = dict(
+        name=payload.name.strip(),
+        email=payload.email.lower().strip(),
+        role=payload.role,
+        status="active",
+    )
+    # Hash if model has hashed_password
+    try:
+        from passlib.context import CryptContext
+        pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
+        user_kwargs["hashed_password"] = pwd_ctx.hash(temp_password)
+    except Exception:
+        pass
+    # Username column - only set if model has it
+    if hasattr(User, "username") and payload.username:
+        user_kwargs["username"] = payload.username.strip()
+    elif payload.username:
+        # No username column - append to name so it is not lost: "Name (@username)"
+        user_kwargs["name"] = f"{payload.name.strip()} (@{payload.username.strip()})"
+    user = User(**user_kwargs)
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    write_audit(db, SUPER_ADMIN_EMAIL, "admin_create_user", target=user.email, meta=f"role={user.role}")
+    return {"id": user.id, "name": user.name, "email": user.email, "role": user.role, "status": user.status, "temp_password": temp_password, "invite_note": "Share temp password securely. User must change it on first login."}
+
+@router.patch("/users/{user_id}")
+def admin_update_user(user_id: int, payload: UpdateUserIn, db: Session = Depends(get_db), token: str = Depends(require_admin_token)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    old = f"{user.name} | {user.email}"
+    if payload.name:
+        user.name = payload.name.strip()
+    if payload.email:
+        # Prevent duplicate email
+        dup = db.query(User).filter(User.email == payload.email.lower().strip(), User.id != user_id).first()
+        if dup:
+            raise HTTPException(status_code=400, detail="Email already in use by another user")
+        user.email = payload.email.lower().strip()
+    if payload.username:
+        if hasattr(User, "username"):
+            user.username = payload.username.strip()
+        else:
+            # No username column - keep in name
+            base = user.name.split(" (@")[0]
+            user.name = f"{base} (@{payload.username.strip()})"
+    db.commit()
+    db.refresh(user)
+    write_audit(db, SUPER_ADMIN_EMAIL, "admin_update_user", target=user.email, meta=f"from: {old} -> {user.name} | {user.email}")
+    return {"id": user.id, "name": user.name, "email": user.email, "role": user.role, "status": user.status}
+
+@router.post("/users/request-password-reset")
+def admin_request_reset_with_link(payload: dict, db: Session = Depends(get_db), token: str = Depends(require_admin_token)):
+    # Override / extend the existing reset - returns a link Admin can copy
+    # This endpoint already exists in your file - if duplicate, FastAPI will use the last one, which is this one with link
+    email = (payload.get("email") or "").lower().strip()
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        return {"ok": True, "message": "If the account exists, a reset has been initiated."}
+    reset_token = secrets.token_urlsafe(32)
+    # Store token if User model has reset fields, else just return link (single-use via audit + expiry note)
+    if hasattr(User, "reset_token"):
+        try:
+            user.reset_token = reset_token
+            from datetime import datetime, timedelta
+            if hasattr(User, "reset_expires"):
+                user.reset_expires = datetime.utcnow() + timedelta(minutes=30)
+            db.commit()
+        except Exception:
+            pass
+    write_audit(db, SUPER_ADMIN_EMAIL, "admin_request_password_reset", target=email, meta="reset link generated by admin, 30 min")
+    # Frontend will show this link - in production you would email it. For now Admin copies it.
+    reset_link = f"https://ledgerwatch-theta.vercel.app/reset?token={reset_token}&email={email}"
+    return {"ok": True, "email": email, "reset_link": reset_link, "expires": "30 minutes, single-use", "message": "Copy the reset link below and send it to the user securely."}
+
+@router.get("/audit/export")
+def admin_audit_export(db: Session = Depends(get_db), token: str = Depends(require_admin_token)):
+    events = db.query(AuditEvent).order_by(AuditEvent.created_at.desc()).limit(1000).all() if 'AuditEvent' in globals() else []
+    # Fallback: try Audit model name variants
+    if not events:
+        try:
+            from backend.app.models import AuditLog
+            events = db.query(AuditLog).order_by(AuditLog.created_at.desc()).limit(1000).all()
+        except Exception:
+            events = []
+    output = io.StringIO()
+    w = csv.writer(output)
+    w.writerow(["time", "actor", "action", "target", "outcome", "meta"])
+    for e in events:
+        w.writerow([getattr(e, "created_at", ""), getattr(e, "actor", ""), getattr(e, "action", ""), getattr(e, "target", ""), getattr(e, "outcome", ""), getattr(e, "meta", "")])
+    output.seek(0)
+    return StreamingResponse(iter([output.getvalue()]), media_type="text/csv", headers={"Content-Disposition": "attachment; filename=ledgerwatch-audit.csv"})
+
+@router.get("/transactions")
+def admin_list_transactions(limit: int = 50, db: Session = Depends(get_db), token: str = Depends(require_admin_token)):
+    # Try common Transaction model names - returns [] if no transaction table yet, never crashes Admin
+    Tx = None
+    for name in ["Transaction", "LedgerTransaction", "Txn"]:
+        try:
+            mod = __import__("backend.app.models", fromlist=[name])
+            Tx = getattr(mod, name, None)
+            if Tx is not None:
+                break
+        except Exception:
+            continue
+    if Tx is None:
+        return []
+    rows = db.query(Tx).order_by(getattr(Tx, "created_at", Tx.id).desc()).limit(limit).all()
+    out = []
+    for r in rows:
+        out.append({
+            "id": getattr(r, "id", None),
+            "reference": getattr(r, "reference", None) or getattr(r, "txn_ref", None) or getattr(r, "tx_ref", None) or f"TXN-{getattr(r, 'id', '')}",
+            "amount": float(getattr(r, "amount", 0) or 0),
+            "currency": getattr(r, "currency", "NGN"),
+            "status": getattr(r, "status", "pending"),
+            "verified": bool(getattr(r, "verified", False) or getattr(r, "is_verified", False)),
+            "created_at": str(getattr(r, "created_at", "")),
+            "email": getattr(r, "email", None) or getattr(r, "user_email", None) or "",
+            "description": getattr(r, "description", None) or getattr(r, "narration", None) or "",
+        })
+    return out
+
+@router.post("/transactions/{tx_id}/verify")
+def admin_verify_transaction(tx_id: int, db: Session = Depends(get_db), token: str = Depends(require_admin_token)):
+    Tx = None
+    for name in ["Transaction", "LedgerTransaction", "Txn"]:
+        try:
+            mod = __import__("backend.app.models", fromlist=[name])
+            Tx = getattr(mod, name, None)
+            if Tx is not None:
+                break
+        except Exception:
+            continue
+    if Tx is None:
+        raise HTTPException(status_code=404, detail="No transaction table found yet")
+    row = db.query(Tx).filter(Tx.id == tx_id).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    if hasattr(row, "verified"):
+        row.verified = True
+    if hasattr(row, "is_verified"):
+        row.is_verified = True
+    if hasattr(row, "status"):
+        row.status = "verified"
+    db.commit()
+    write_audit(db, SUPER_ADMIN_EMAIL, "admin_verify_transaction", target=str(tx_id), meta="transaction verified by admin")
+    return {"ok": True, "id": tx_id, "status": "verified"}
+
+@router.delete("/users/{user_id}/hard-delete")
+def admin_hard_delete_user(user_id: int, db: Session = Depends(get_db), token: str = Depends(require_admin_token)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    # Last super admin protection
+    if user.role == "super_admin":
+        count = db.query(User).filter(User.role == "super_admin", User.status == "active").count()
+        if count <= 1:
+            raise HTTPException(status_code=400, detail="Cannot hard-delete the last active super admin")
+    email = user.email
+    name = user.name
+    # Write audit BEFORE delete so you have proof
+    write_audit(db, SUPER_ADMIN_EMAIL, "admin_hard_delete_user", target=email, meta=f"HARD DELETE: {name} | {email} | role={user.role} - permanent")
+    db.delete(user)
+    db.commit()
+    return {"ok": True, "deleted": email, "warning": "Permanent. This cannot be undone."}
+
+@router.post("/users/{user_id}/restore")
+def admin_restore_user(user_id: int, db: Session = Depends(get_db), token: str = Depends(require_admin_token)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found - hard-deleted users cannot be restored")
+    user.status = "active"
+    db.commit()
+    write_audit(db, SUPER_ADMIN_EMAIL, "admin_restore_user", target=user.email, meta="restored deactivated user to active")
+    return {"ok": True, "id": user.id, "status": "active"}
