@@ -189,7 +189,7 @@ const [view, setView] = useState<"landing" | "auth" | "app">(() => (getSession()
   const handleGoogle = () => {
     const cid = (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID || "";
     if (!cid) { setAuthError("To enable real Google login: add VITE_GOOGLE_CLIENT_ID in Vercel → Settings → Environment Variables, then redeploy."); return; }
-    const redirectUri = window.location.origin + "/";
+    const redirectUri = window.location.origin;
     const nonce = Math.random().toString(36).substring(2) + Date.now().toString(36);
     sessionStorage.setItem("lw_google_nonce", nonce);
     const params = new URLSearchParams({ client_id: cid, redirect_uri: redirectUri, response_type: "id_token", scope: "openid email profile", nonce: nonce, prompt: "select_account" });
