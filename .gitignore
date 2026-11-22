@@ -1,10 +1,13 @@
 .venv/
 __pycache__/
 *.pyc
+*.pyo
+.pytest_cache/
+.coverage
+htmlcov/
 .env
 *.db
+*.sqlite3
 node_modules/
 dist/
 .DS_Store
-node_modules/
-dist/
