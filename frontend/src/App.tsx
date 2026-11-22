@@ -582,7 +582,7 @@ const [view, setView] = useState<"landing" | "auth" | "app">(() => (getSession()
             </>
           )}
           {page === "admin" && isAdmin && (
-          <AdminConsole apiUrl={API_URL} adminToken={adminToken} />
+          <AdminConsole token={adminToken} onBack={() => setView('app')} />
         )}
         {page === "settings" && (
             <>
