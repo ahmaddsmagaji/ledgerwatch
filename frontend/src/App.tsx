@@ -114,6 +114,7 @@ export default function App() {
 const [view, setView] = useState<"landing" | "auth" | "app">(() => (getSession() ? "app" : "landing"));
   const [authMode, setAuthMode] = useState<"login" | "signup">("signup");
   const [user, setUser] = useState<User | null>(() => getSession());
+  const apiHeaders = () => ({ "X-User-Email": (user?.email || "").toLowerCase() });
   const [form, setForm] = useState({ name: "", email: "", phone: "", business: "", password: "" });
   const [authError, setAuthError] = useState("");
   const [showForgot, setShowForgot] = useState(false);
@@ -182,11 +183,11 @@ const [view, setView] = useState<"landing" | "auth" | "app">(() => (getSession()
   useEffect(() => { document.body.classList.toggle("dark-mode", darkMode); localStorage.setItem("lw_dark", darkMode ? "1" : "0"); }, [darkMode]);
   useEffect(() => {
     if (view !== "app") return;
-    fetch(`${API_URL}/api/summary`).then((r) => r.json()).then((d) => { if (d && typeof d === "object") { setOverview(mapSummary(d)); } }).catch(() => {});
-    fetch(`${API_URL}/api/overview`).then((r) => r.json()).then((d) => { if (d && typeof d === "object" && d.total_value != null) { setOverview((prev) => ({ ...prev, ...d, breakdown: asArray<BreakdownItem>(d.breakdown ?? prev.breakdown) })); } }).catch(() => {});
-    fetch(`${API_URL}/api/transactions`).then((r) => r.json()).then((d) => setTxns(asArray<Txn>(Array.isArray(d) ? d : (d as any)?.items))).catch(() => {});
-    fetch(`${API_URL}/api/settlements`).then((r) => r.json()).then((d) => setSettlements(asArray<Settlement>(Array.isArray(d) ? d : (d as any)?.items))).catch(() => {});
-    fetch(`${API_URL}/api/exceptions?limit=200`).then((r) => r.json()).then((d) => setExceptions(mapExceptions(d))).catch(() => {});
+    fetch(`${API_URL}/api/summary`, { headers: apiHeaders() }).then((r) => r.json()).then((d) => { if (d && typeof d === "object") { setOverview(mapSummary(d)); } }).catch(() => {});
+    fetch(`${API_URL}/api/overview`, { headers: apiHeaders() }).then((r) => r.json()).then((d) => { if (d && typeof d === "object" && d.total_value != null) { setOverview((prev) => ({ ...prev, ...d, breakdown: asArray<BreakdownItem>(d.breakdown ?? prev.breakdown) })); } }).catch(() => {});
+    fetch(`${API_URL}/api/transactions`, { headers: apiHeaders() }).then((r) => r.json()).then((d) => setTxns(asArray<Txn>(Array.isArray(d) ? d : (d as any)?.items))).catch(() => {});
+    fetch(`${API_URL}/api/settlements`, { headers: apiHeaders() }).then((r) => r.json()).then((d) => setSettlements(asArray<Settlement>(Array.isArray(d) ? d : (d as any)?.items))).catch(() => {});
+    fetch(`${API_URL}/api/exceptions?limit=200`, { headers: apiHeaders() }).then((r) => r.json()).then((d) => setExceptions(mapExceptions(d))).catch(() => {});
   }, [view]);
 
   const openAuth = (mode: "login" | "signup") => { setAuthMode(mode); setAuthError(""); setShowForgot(false); setMobileMenu(false); setView("auth"); };
@@ -276,7 +277,7 @@ const [view, setView] = useState<"landing" | "auth" | "app">(() => (getSession()
       if (!ordersFile || !settlementsFile || !bankFile) throw new Error("Please select all 3 CSVs in Step 1: Orders, Settlements, Bank");
       const fd = new FormData();
       fd.append("orders", ordersFile); fd.append("settlements", settlementsFile); fd.append("bank", bankFile);
-      const res = await fetch(`${API_URL}/api/upload`, { method: "POST", body: fd });
+      const res = await fetch(`${API_URL}/api/upload`, { method: "POST", headers: apiHeaders(), body: fd });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.detail || "Upload failed");
       const total = Number(data.TOTAL || 0);
@@ -291,10 +292,10 @@ const [view, setView] = useState<"landing" | "auth" | "app">(() => (getSession()
       setExceptions(mapped as any);
       setWizardStep(3);
       setAudit((a) => [{ time: "Just now", action: `Run ${reconData.run_id} completed - ${total} checked`, by: "System" }, ...a]);
-      fetch(`${API_URL}/api/summary`).then((r) => r.json()).then((d) => { if (d && typeof d === "object") setOverview(mapSummary(d)); }).catch(() => {});
-      fetch(`${API_URL}/api/transactions`).then((r) => r.json()).then((d) => setTxns(asArray<Txn>(Array.isArray(d) ? d : (d as any)?.items))).catch(() => {});
-      fetch(`${API_URL}/api/settlements`).then((r) => r.json()).then((d) => setSettlements(asArray<Settlement>(Array.isArray(d) ? d : (d as any)?.items))).catch(() => {});
-      fetch(`${API_URL}/api/exceptions?limit=200`).then((r) => r.json()).then((d) => setExceptions(mapExceptions(d))).catch(() => {});
+      fetch(`${API_URL}/api/summary`, { headers: apiHeaders() }).then((r) => r.json()).then((d) => { if (d && typeof d === "object") setOverview(mapSummary(d)); }).catch(() => {});
+      fetch(`${API_URL}/api/transactions`, { headers: apiHeaders() }).then((r) => r.json()).then((d) => setTxns(asArray<Txn>(Array.isArray(d) ? d : (d as any)?.items))).catch(() => {});
+      fetch(`${API_URL}/api/settlements`, { headers: apiHeaders() }).then((r) => r.json()).then((d) => setSettlements(asArray<Settlement>(Array.isArray(d) ? d : (d as any)?.items))).catch(() => {});
+      fetch(`${API_URL}/api/exceptions?limit=200`, { headers: apiHeaders() }).then((r) => r.json()).then(() => { /* keep Step 3 list from upload response - do not overwrite with global list */ }).catch(() => {});
     } catch (err: any) { setReconError(err?.message || "Could not run reconciliation. Is backend on?"); }
     setReconLoading(false);
   };

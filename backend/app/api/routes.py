@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import Optional
@@ -14,6 +14,12 @@ from app.models.tables import (
 )
 
 router = APIRouter()
+def _owner(request: Request) -> str:
+    try: return (request.headers.get("x-user-email") or "").strip().lower()
+    except Exception: return ""
+def _strip(ref):
+    if not ref: return ref
+    return ref.split("::", 1)[1] if "::" in str(ref) else ref
 
 VALID_TYPES = [m.value for m in ExceptionType] + ["needs_review"]
 VALID_STATUSES = ["open", "resolved", "escalated"]
@@ -37,7 +43,7 @@ def order_dict(o):
         return None
     return {
         "id": o.id,
-        "order_ref": o.order_ref,
+        "order_ref": _strip(o.order_ref),
         "customer_name": o.customer_name,
         "amount_kobo": o.amount_kobo,
         "ordered_at": o.ordered_at.isoformat() if getattr(o, "ordered_at", None) else None,
@@ -48,8 +54,8 @@ def settlement_dict(s):
         return None
     return {
         "id": s.id,
-        "processor_ref": s.processor_ref,
-        "order_ref": s.order_ref,
+        "processor_ref": _strip(s.processor_ref),
+        "order_ref": _strip(s.order_ref),
         "batch_id": s.batch_id,
         "gross_kobo": s.gross_kobo,
         "fee_kobo": s.fee_kobo,
@@ -62,7 +68,7 @@ def bank_dict(b):
         return None
     return {
         "id": b.id,
-        "bank_ref": b.bank_ref,
+        "bank_ref": _strip(b.bank_ref),
         "narration": b.narration,
         "amount_kobo": b.amount_kobo,
         "value_date": b.value_date.isoformat() if getattr(b, "value_date", None) else None,
@@ -86,8 +92,8 @@ def exception_to_response(db, e):
     ev = parse_evidence(e)
     exc_type = e.type.value if hasattr(e.type, "value") else str(e.type)
     status = e.status.value if hasattr(e.status, "value") else str(e.status)
-    order_ref = o.order_ref if o else (s.order_ref if s and s.order_ref else "")
-    bank_ref = b.bank_ref if b else ""
+    order_ref = _strip(o.order_ref) if o else (_strip(s.order_ref) if s and s.order_ref else "")
+    bank_ref = _strip(b.bank_ref) if b else ""
     # summary must be truthy
     summary = f"{exc_type} on {order_ref or bank_ref or f'#{e.id}'} - {e.amount_at_risk_kobo} kobo at risk"
     return {
@@ -126,9 +132,11 @@ def health():
     return {"status": "ok"}
 
 @router.get("/summary")
-def get_summary(db: Session = Depends(get_db)):
-    orders_total = db.query(func.count(Order.id)).scalar() or 0
-    all_exc = db.query(ReconException).all()
+def get_summary(request: Request, db: Session = Depends(get_db)):
+    owner = _owner(request)
+    _f = lambda q: q.filter(Order.owner_email == owner) if owner else q
+    orders_total = db.query(func.count(Order.id)).filter(Order.owner_email == owner).scalar() or 0 if owner else db.query(func.count(Order.id)).scalar() or 0
+    all_exc = db.query(ReconException).filter(ReconException.owner_email == owner).all() if owner else db.query(ReconException).all()
     # by_type - include needs_review with 0
     by_type = {}
     for t in VALID_TYPES:
@@ -164,18 +172,22 @@ def get_summary(db: Session = Depends(get_db)):
     }
 
 @router.get("/overview")
-def get_overview(db: Session = Depends(get_db)):
-    return get_summary(db)
+def get_overview(request: Request, db: Session = Depends(get_db)):
+    return get_summary(request, db)
 
 @router.get("/transactions")
-def get_transactions(limit: int = Query(100, ge=1, le=200), offset: int = Query(0, ge=0), db: Session = Depends(get_db)):
-    rows = db.query(Order).order_by(Order.id.asc()).offset(offset).limit(limit).all()
-    return {"total": db.query(func.count(Order.id)).scalar() or 0, "items": [order_dict(o) for o in rows]}
+def get_transactions(request: Request, limit: int = Query(100, ge=1, le=200), offset: int = Query(0, ge=0), db: Session = Depends(get_db)):
+    owner = _owner(request)
+    _q = db.query(Order).filter(Order.owner_email == owner) if owner else db.query(Order)
+    rows = _q.order_by(Order.id.asc()).offset(offset).limit(limit).all()
+    return {"total": _q.count(), "items": [order_dict(o) for o in rows]}
 
 @router.get("/settlements")
-def get_settlements(limit: int = Query(100, ge=1, le=200), offset: int = Query(0, ge=0), db: Session = Depends(get_db)):
-    rows = db.query(Settlement).offset(offset).limit(limit).all()
-    return {"total": db.query(func.count(Settlement.id)).scalar() or 0, "items": [settlement_dict(s) for s in rows]}
+def get_settlements(request: Request, limit: int = Query(100, ge=1, le=200), offset: int = Query(0, ge=0), db: Session = Depends(get_db)):
+    owner = _owner(request)
+    _q = db.query(Settlement).filter(Settlement.owner_email == owner) if owner else db.query(Settlement)
+    rows = _q.offset(offset).limit(limit).all()
+    return {"total": _q.count(), "items": [settlement_dict(s) for s in rows]}
 
 @router.get("/exceptions")
 def get_exceptions(
@@ -185,13 +197,14 @@ def get_exceptions(
     q: Optional[str] = Query(None),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db), request: Request = None,
 ):
+    owner = _owner(request) if request is not None else ''
     if type is not None and type not in VALID_TYPES:
         raise HTTPException(status_code=422, detail=f"Invalid type: {type}")
     if status is not None and status not in VALID_STATUSES:
         raise HTTPException(status_code=422, detail=f"Invalid status: {status}")
-    rows = db.query(ReconException).all()
+    rows = db.query(ReconException).filter(ReconException.owner_email == owner).all() if owner else db.query(ReconException).all()
     # Sort by amount_at_risk desc - test expects this exact order
     rows = sorted(rows, key=lambda e: int(e.amount_at_risk_kobo or 0), reverse=True)
     filtered = rows
@@ -285,8 +298,8 @@ def exception_action(exc_id: str, payload: ActionPayload, db: Session = Depends(
     return do_action(db, exc_id, payload)
 
 @router.post("/reconcile")
-def run_reconcile(db: Session = Depends(get_db)):
-    return get_summary(db)
+def run_reconcile(request: Request, db: Session = Depends(get_db)):
+    return get_summary(request, db)
 
 class LoadSamplePayload(BaseModel):
     confirm: bool

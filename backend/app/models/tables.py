@@ -1,7 +1,7 @@
 """LedgerWatch tables - single source of truth. Clean imports, no __import__ hacks."""
 import enum
 from datetime import date, datetime, timezone
-from sqlalchemy import CheckConstraint, Enum, ForeignKey, String, Text
+from sqlalchemy import CheckConstraint, Enum, ForeignKey, String, Text, UniqueConstraint, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 from app.core.database import Base
 
@@ -33,6 +33,8 @@ def _enum(enum_class):
 
 class Order(Base):
     __tablename__ = "orders"
+    owner_email: Mapped[str] = mapped_column(String(255), default="", index=True)
+    owner_email: Mapped[str] = mapped_column(String(255), default="", index=True)
     __table_args__ = (CheckConstraint("amount_kobo > 0", name="ck_orders_amount_positive"),)
     id: Mapped[int] = mapped_column(primary_key=True)
     order_ref: Mapped[str] = mapped_column(String(64), unique=True, index=True)
@@ -42,6 +44,8 @@ class Order(Base):
 
 class Settlement(Base):
     __tablename__ = "settlements"
+    owner_email: Mapped[str] = mapped_column(String(255), default="", index=True)
+    owner_email: Mapped[str] = mapped_column(String(255), default="", index=True)
     __table_args__ = (
         CheckConstraint("gross_kobo > 0", name="ck_settlements_gross_positive"),
         CheckConstraint("fee_kobo >= 0", name="ck_settlements_fee_nonnegative"),
@@ -58,6 +62,8 @@ class Settlement(Base):
 
 class BankTransaction(Base):
     __tablename__ = "bank_transactions"
+    owner_email: Mapped[str] = mapped_column(String(255), default="", index=True)
+    owner_email: Mapped[str] = mapped_column(String(255), default="", index=True)
     __table_args__ = (CheckConstraint("amount_kobo > 0", name="ck_bank_amount_positive"),)
     id: Mapped[int] = mapped_column(primary_key=True)
     bank_ref: Mapped[str] = mapped_column(String(64), unique=True, index=True)
@@ -67,6 +73,8 @@ class BankTransaction(Base):
 
 class Match(Base):
     __tablename__ = "matches"
+    owner_email: Mapped[str] = mapped_column(String(255), default="", index=True)
+    owner_email: Mapped[str] = mapped_column(String(255), default="", index=True)
     __table_args__ = (CheckConstraint("order_id IS NOT NULL OR settlement_id IS NOT NULL OR bank_txn_id IS NOT NULL", name="ck_matches_has_a_record"),)
     id: Mapped[int] = mapped_column(primary_key=True)
     tier: Mapped[MatchTier] = mapped_column(_enum(MatchTier))
@@ -77,6 +85,8 @@ class Match(Base):
 
 class ReconException(Base):
     __tablename__ = "exceptions"
+    owner_email: Mapped[str] = mapped_column(String(255), default="", index=True)
+    owner_email: Mapped[str] = mapped_column(String(255), default="", index=True)
     __table_args__ = (CheckConstraint("amount_at_risk_kobo >= 0", name="ck_exceptions_amount_nonneg"),)
     id: Mapped[int] = mapped_column(primary_key=True)
     type: Mapped[ExceptionType] = mapped_column(_enum(ExceptionType), index=True)

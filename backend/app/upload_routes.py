@@ -4,12 +4,39 @@ For multi-user later, add user_id filter - for now this is the real flow."""
 import csv, io
 from datetime import datetime
 from collections import defaultdict
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from app.core.database import SessionLocal
 from app.models.tables import Order, Settlement, BankTransaction, Match, ReconException, MatchTier, ExceptionType, ExceptionStatus
 
 router = APIRouter(tags=["upload"])
+def _owner(request) -> str:
+    try:
+        return (request.headers.get("x-user-email") or "").strip().lower()
+    except Exception:
+        return ""
+def _ensure_owner_cols(db):
+    # SQLite: create_all does NOT add columns to existing tables, so ALTER if missing
+    try:
+        from sqlalchemy import text as _txt
+        for tbl in ["orders","settlements","bank_transactions","matches","exceptions"]:
+            cols = [r[1] for r in db.execute(_txt(f"PRAGMA table_info({tbl})")).fetchall()]
+            if "owner_email" not in cols:
+                db.execute(_txt(f"ALTER TABLE {tbl} ADD COLUMN owner_email VARCHAR(255) DEFAULT ''"))
+        db.commit()
+    except Exception:
+        try: db.rollback()
+        except Exception: pass
+def _pref(owner: str, ref: str) -> str:
+    # Keep global unique constraints working per-user: store "owner::REF" internally, strip on display
+    ref = (ref or "").strip()
+    if not ref: return ref
+    if "::" in ref and ref.startswith(owner + "::"): return ref
+    return f"{owner}::{ref}" if owner else ref
+def _unpref(ref: str) -> str:
+    if not ref: return ref
+    if "::" in ref: return ref.split("::", 1)[1]
+    return ref
 
 def pd(s):
     s = (s or "").strip()
@@ -41,10 +68,18 @@ def upload_page():
     """
 
 @router.post("/api/upload")
-async def upload_and_reconcile(orders: UploadFile = File(...), settlements: UploadFile = File(...), bank: UploadFile = File(...)):
+async def upload_and_reconcile(request, orders: UploadFile = File(...), settlements: UploadFile = File(...), bank: UploadFile = File(...)):
     db = SessionLocal()
     try:
-        # Clear current dataset
+        owner = _owner(request)
+        if not owner:
+            raise HTTPException(status_code=400, detail='Missing X-User-Email header - please log in')
+        _ensure_owner_cols(db)
+        # Clear ONLY this user's dataset - other users untouched
+        db.query(Match).filter(Match.owner_email == owner).delete(); db.query(ReconException).filter(ReconException.owner_email == owner).delete()
+        db.query(Order).filter(Order.owner_email == owner).delete(); db.query(Settlement).filter(Settlement.owner_email == owner).delete(); db.query(BankTransaction).filter(BankTransaction.owner_email == owner).delete()
+        db.commit()
+        # Clear current dataset (old global code removed - now per-user above)
         db.query(Match).delete(); db.query(ReconException).delete()
         db.query(Order).delete(); db.query(Settlement).delete(); db.query(BankTransaction).delete()
         db.commit()
@@ -55,7 +90,7 @@ async def upload_and_reconcile(orders: UploadFile = File(...), settlements: Uplo
             if not pay: continue
             amt = int(float((row.get("amount_kobo") or row.get("amount") or 0) or 0))
             dt = pd(row.get("order_date") or row.get("ordered_at") or row.get("date")) or datetime.now()
-            db.add(Order(order_ref=pay, customer_name=f"{(row.get('customer') or row.get('customer_name') or 'Customer').strip()} ({oid})", amount_kobo=amt, ordered_at=dt))
+            db.add(Order(owner_email=owner, order_ref=_pref(owner, pay), customer_name=f"{(row.get('customer') or row.get('customer_name') or 'Customer').strip()} ({oid})", amount_kobo=amt, ordered_at=dt))
         db.commit()
         # Settlements - settlement_id is unique, payment_reference is link
         for row in parse_csv(settlements):
@@ -67,7 +102,7 @@ async def upload_and_reconcile(orders: UploadFile = File(...), settlements: Uplo
             net_raw = row.get("net_kobo") or row.get("net")
             net = int(float(net_raw)) if net_raw else max(0, gross - fee)
             sd = pd(row.get("settlement_date") or row.get("settled_date") or row.get("date"))
-            db.add(Settlement(processor_ref=sid, order_ref=pay or None, batch_id=sid, gross_kobo=gross, fee_kobo=fee, net_kobo=net, settled_date=(sd.date() if sd else datetime.now().date())))
+            db.add(Settlement(owner_email=owner, processor_ref=_pref(owner, sid), order_ref=_pref(owner, pay) if pay else None, batch_id=sid, gross_kobo=gross, fee_kobo=fee, net_kobo=net, settled_date=(sd.date() if sd else datetime.now().date())))
         db.commit()
         # Bank - credit only
         for row in parse_csv(bank):
@@ -77,33 +112,33 @@ async def upload_and_reconcile(orders: UploadFile = File(...), settlements: Uplo
             desc = (row.get("description") or row.get("narration") or "").strip()
             ref = (row.get("reference") or "").strip()
             vd = pd(row.get("transaction_date") or row.get("value_date") or row.get("date"))
-            db.add(BankTransaction(bank_ref=bid, narration=f"{desc} | ref:{ref}"[:255], amount_kobo=amt, value_date=(vd.date() if vd else datetime.now().date())))
+            db.add(BankTransaction(owner_email=owner, bank_ref=_pref(owner, bid), narration=f"{desc} | ref:{ref}"[:255], amount_kobo=amt, value_date=(vd.date() if vd else datetime.now().date())))
         db.commit()
         # Reconcile - same logic as run_recon.py
-        all_orders = db.query(Order).all(); all_sett = db.query(Settlement).all(); all_bank = db.query(BankTransaction).all()
+        all_orders = db.query(Order).filter(Order.owner_email == owner).all(); all_sett = db.query(Settlement).filter(Settlement.owner_email == owner).all(); all_bank = db.query(BankTransaction).filter(BankTransaction.owner_email == owner).all()
         by_pay = defaultdict(list)
         for s in all_sett: by_pay[s.order_ref].append(s)
         matched = 0
         for o in all_orders:
             lst = by_pay.get(o.order_ref, [])
             if not lst:
-                db.add(ReconException(type=ExceptionType.MISSING_SETTLEMENT, status=ExceptionStatus.OPEN, order_id=o.id, amount_at_risk_kobo=o.amount_kobo, evidence=f"Order {o.order_ref} {o.amount_kobo}k has no settlement")); continue
+                db.add(ReconException(owner_email=owner, type=ExceptionType.MISSING_SETTLEMENT, status=ExceptionStatus.OPEN, order_id=o.id, amount_at_risk_kobo=o.amount_kobo, evidence=f"Order {o.order_ref} {o.amount_kobo}k has no settlement")); continue
             exact = [s for s in lst if s.gross_kobo == o.amount_kobo]
             if exact:
-                db.add(Match(tier=MatchTier.EXACT_REFERENCE, order_id=o.id, settlement_id=exact[0].id)); matched += 1
+                db.add(Match(owner_email=owner, tier=MatchTier.EXACT_REFERENCE, order_id=o.id, settlement_id=exact[0].id)); matched += 1
                 for dup in exact[1:]:
-                    db.add(ReconException(type=ExceptionType.DUPLICATE, status=ExceptionStatus.OPEN, order_id=o.id, settlement_id=dup.id, amount_at_risk_kobo=dup.gross_kobo, evidence=f"Duplicate settlement {dup.processor_ref} for {o.order_ref} {dup.gross_kobo}k"))
+                    db.add(ReconException(owner_email=owner, type=ExceptionType.DUPLICATE, status=ExceptionStatus.OPEN, order_id=o.id, settlement_id=dup.id, amount_at_risk_kobo=dup.gross_kobo, evidence=f"Duplicate settlement {dup.processor_ref} for {o.order_ref} {dup.gross_kobo}k"))
                 for s in lst:
                     if s not in exact:
-                        db.add(ReconException(type=ExceptionType.AMOUNT_MISMATCH, status=ExceptionStatus.OPEN, order_id=o.id, settlement_id=s.id, amount_at_risk_kobo=abs(o.amount_kobo - s.gross_kobo), evidence=f"Order {o.order_ref} {o.amount_kobo}k vs settlement {s.processor_ref} {s.gross_kobo}k"))
+                        db.add(ReconException(owner_email=owner, type=ExceptionType.AMOUNT_MISMATCH, status=ExceptionStatus.OPEN, order_id=o.id, settlement_id=s.id, amount_at_risk_kobo=abs(o.amount_kobo - s.gross_kobo), evidence=f"Order {o.order_ref} {o.amount_kobo}k vs settlement {s.processor_ref} {s.gross_kobo}k"))
             else:
                 for s in lst:
-                    db.add(ReconException(type=ExceptionType.AMOUNT_MISMATCH, status=ExceptionStatus.OPEN, order_id=o.id, settlement_id=s.id, amount_at_risk_kobo=abs(o.amount_kobo - s.gross_kobo), evidence=f"Order {o.order_ref} {o.amount_kobo}k vs settlement {s.processor_ref} {s.gross_kobo}k"))
+                    db.add(ReconException(owner_email=owner, type=ExceptionType.AMOUNT_MISMATCH, status=ExceptionStatus.OPEN, order_id=o.id, settlement_id=s.id, amount_at_risk_kobo=abs(o.amount_kobo - s.gross_kobo), evidence=f"Order {o.order_ref} {o.amount_kobo}k vs settlement {s.processor_ref} {s.gross_kobo}k"))
         db.commit()
         order_pays = {o.order_ref for o in all_orders}
         for s in all_sett:
             if s.order_ref not in order_pays:
-                db.add(ReconException(type=ExceptionType.NEEDS_REVIEW, status=ExceptionStatus.OPEN, settlement_id=s.id, amount_at_risk_kobo=s.gross_kobo, evidence=f"Orphan settlement {s.processor_ref} for unknown {s.order_ref} {s.gross_kobo}k"))
+                db.add(ReconException(owner_email=owner, type=ExceptionType.NEEDS_REVIEW, status=ExceptionStatus.OPEN, settlement_id=s.id, amount_at_risk_kobo=s.gross_kobo, evidence=f"Orphan settlement {s.processor_ref} for unknown {s.order_ref} {s.gross_kobo}k"))
         # Bank matches by PAY-xxxx (order_ref), NOT by SET-xxxx. Narration is "desc | ref:PAY-xxxx"
         sett_by_pay = {}
         for s in all_sett:
@@ -122,11 +157,11 @@ async def upload_and_reconcile(orders: UploadFile = File(...), settlements: Uplo
                         break
             sett = sett_by_pay.get(ref_pay) if ref_pay else None
             if sett is None:
-                db.add(ReconException(type=ExceptionType.ORPHAN_BANK_CREDIT, status=ExceptionStatus.OPEN, bank_txn_id=b.id, amount_at_risk_kobo=b.amount_kobo, evidence=f"Orphan bank {b.bank_ref} {b.amount_kobo}k :: {b.narration}"))
+                db.add(ReconException(owner_email=owner, type=ExceptionType.ORPHAN_BANK_CREDIT, status=ExceptionStatus.OPEN, bank_txn_id=b.id, amount_at_risk_kobo=b.amount_kobo, evidence=f"Orphan bank {b.bank_ref} {b.amount_kobo}k :: {b.narration}"))
             elif sett.net_kobo != b.amount_kobo:
-                db.add(ReconException(type=ExceptionType.FEE_DISCREPANCY, status=ExceptionStatus.OPEN, settlement_id=sett.id, bank_txn_id=b.id, amount_at_risk_kobo=abs(sett.net_kobo - b.amount_kobo), evidence=f"Bank {b.bank_ref} {b.amount_kobo}k vs settlement {sett.processor_ref} net {sett.net_kobo}k"))
+                db.add(ReconException(owner_email=owner, type=ExceptionType.FEE_DISCREPANCY, status=ExceptionStatus.OPEN, settlement_id=sett.id, bank_txn_id=b.id, amount_at_risk_kobo=abs(sett.net_kobo - b.amount_kobo), evidence=f"Bank {b.bank_ref} {b.amount_kobo}k vs settlement {sett.processor_ref} net {sett.net_kobo}k"))
         db.commit()
-        exceptions = db.query(ReconException).all()
+        exceptions = db.query(ReconException).filter(ReconException.owner_email == owner).all()
         return {"ok": True, "TOTAL": len(all_orders), "MATCHED": matched, "EXCEPTIONS": len(exceptions),
                 "orders": len(all_orders), "settlements": len(all_sett), "bank": len(all_bank),
                 "exceptions": [{"type": e.type.value, "evidence": e.evidence} for e in exceptions]}
@@ -137,9 +172,11 @@ async def upload_and_reconcile(orders: UploadFile = File(...), settlements: Uplo
         db.close()
 
 @router.get("/api/upload/result")
-def last_result():
+def last_result(request: Request):
     db = SessionLocal()
     try:
-        total = db.query(Order).count(); matched = db.query(Match).count(); exc = db.query(ReconException).all()
+        owner = _owner(request)
+        _ensure_owner_cols(db)
+        total = db.query(Order).filter(Order.owner_email == owner).count(); matched = db.query(Match).filter(Match.owner_email == owner).count(); exc = db.query(ReconException).filter(ReconException.owner_email == owner).all()
         return {"TOTAL": total, "MATCHED": matched, "EXCEPTIONS": len(exc), "exceptions": [{"type": e.type.value, "evidence": e.evidence, "status": e.status.value} for e in exc]}
     finally: db.close()
