@@ -3,6 +3,7 @@ import "./App.css";
 import AdminConsole from "./AdminConsole";
 import "./mobile.css";
 
+// REAL DATA ONLY - anyone uploads their own 3 CSVs, no demo
 const API_URL = "https://ledgerwatch-backend-v2.onrender.com";
 const PURPLE = "#5B0DBA";
 const PURPLE_DARK = "#2E1065";
@@ -133,7 +134,9 @@ const [view, setView] = useState<"landing" | "auth" | "app">(() => (getSession()
   const [statusFilter, setStatusFilter] = useState("All");
   const [channelFilter, setChannelFilter] = useState("All");
   const [wizardStep, setWizardStep] = useState(1);
-  const [uploadedFile, setUploadedFile] = useState<string | null>(null);
+  const [ordersFile, setOrdersFile] = useState<File | null>(null);
+  const [settlementsFile, setSettlementsFile] = useState<File | null>(null);
+  const [bankFile, setBankFile] = useState<File | null>(null);
   const [recon, setRecon] = useState<ReconResult | null>(null);
   const [reconLoading, setReconLoading] = useState(false);
   const [reconError, setReconError] = useState("");
@@ -270,13 +273,29 @@ const [view, setView] = useState<"landing" | "auth" | "app">(() => (getSession()
         const runReconciliation = async () => {
     setReconLoading(true); setReconError("");
     try {
-      const res = await fetch(`${API_URL}/api/reconcile`, { method: "POST" });
-      if (!res.ok) throw new Error("fail");
-      const data = await res.json();
-      setRecon({ ...data, exceptions: mapExceptions(data.exceptions) });
-      setExceptions(mapExceptions(data.exceptions)); setWizardStep(3);
-      setAudit((a) => [{ time: "Just now", action: `Run ${data.run_id} completed — ${n(data.total)} checked`, by: "System" }, ...a]);
-    } catch { setReconError("Could not run reconciliation. Is backend on?"); }
+      if (!ordersFile || !settlementsFile || !bankFile) throw new Error("Please select all 3 CSVs in Step 1: Orders, Settlements, Bank");
+      const fd = new FormData();
+      fd.append("orders", ordersFile); fd.append("settlements", settlementsFile); fd.append("bank", bankFile);
+      const res = await fetch(`${API_URL}/api/upload`, { method: "POST", body: fd });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.detail || "Upload failed");
+      const total = Number(data.TOTAL || 0);
+      const matched = Number(data.MATCHED || 0);
+      const excList = Array.isArray(data.exceptions) ? data.exceptions : [];
+      const mapped = excList.map((e: any, i: number) => {
+        const m = String(e.evidence || "").match(/(\d+)k/);
+        return { id: `EXC-${i + 1}`, type: String(e.type || "Needs Review").replace(/_/g, " "), detail: String(e.evidence || ""), amount: m ? Number(m[1]) : 0, txn: "", reference: "" };
+      });
+      const reconData = { run_id: `REC-${new Date().toISOString().slice(0,10)}-${String(Date.now()).slice(-4)}`, total, matched, exceptions_count: excList.length, rate: total ? Math.round((matched / total) * 1000) / 10 : 0, exceptions: mapped };
+      setRecon(reconData as any);
+      setExceptions(mapped as any);
+      setWizardStep(3);
+      setAudit((a) => [{ time: "Just now", action: `Run ${reconData.run_id} completed - ${total} checked`, by: "System" }, ...a]);
+      fetch(`${API_URL}/api/summary`).then((r) => r.json()).then((d) => { if (d && typeof d === "object") setOverview(mapSummary(d)); }).catch(() => {});
+      fetch(`${API_URL}/api/transactions`).then((r) => r.json()).then((d) => setTxns(asArray<Txn>(Array.isArray(d) ? d : (d as any)?.items))).catch(() => {});
+      fetch(`${API_URL}/api/settlements`).then((r) => r.json()).then((d) => setSettlements(asArray<Settlement>(Array.isArray(d) ? d : (d as any)?.items))).catch(() => {});
+      fetch(`${API_URL}/api/exceptions?limit=200`).then((r) => r.json()).then((d) => setExceptions(mapExceptions(d))).catch(() => {});
+    } catch (err: any) { setReconError(err?.message || "Could not run reconciliation. Is backend on?"); }
     setReconLoading(false);
   };
   const resolveSelected = async () => {
@@ -542,7 +561,7 @@ const [view, setView] = useState<"landing" | "auth" | "app">(() => (getSession()
               <h1 className="page-h1">Reconciliation</h1>
               <p className="hero-sub">Run a new reconciliation.</p>
               <div className="wizard-steps"><div className={`w-step ${wizardStep >= 1 ? "active" : ""}`}><span>1</span> Upload</div><div className="w-line" /><div className={`w-step ${wizardStep >= 2 ? "active" : ""}`}><span>2</span> Run</div><div className="w-line" /><div className={`w-step ${wizardStep >= 3 ? "active" : ""}`}><span>3</span> Results</div></div>
-              {wizardStep === 1 && (<div className="panel wizard-panel"><h3>Step 1 — Upload your 3 sources</h3><p>Internal, Settlement, Bank statement. CSV for now. Or use demo data.</p><label className="upload-box"><input type="file" accept=".csv" onChange={(e) => { const f = e.target.files?.[0]; if (f) setUploadedFile(f.name); }} hidden /><div className="upload-icon">⬆</div><strong>{uploadedFile ? `Selected: ${uploadedFile}` : "Click to choose CSV file"}</strong><small>CSV only · Max 5MB</small></label><div className="wizard-actions"><button className="secondary-btn" onClick={() => { setUploadedFile(null); setWizardStep(2); }}>Use Demo Data →</button><button className="primary-btn" disabled={!uploadedFile} onClick={() => setWizardStep(2)}>{uploadedFile ? "Continue with CSV →" : "Choose a file to continue"}</button></div></div>)}
+              {wizardStep === 1 && (<div className="panel wizard-panel"><h3>Step 1 - Upload your 3 sources</h3><p>Internal, Settlement, Bank statement. CSV only. Your files only - no demo data.</p>{reconError && <p className="error">{reconError}</p>}<div style={{ display: "grid", gap: 12 }}><label className="field">1. Orders CSV - order_id, payment_reference, order_date, customer, amount_kobo<input type="file" accept=".csv" onChange={(e) => setOrdersFile(e.target.files?.[0] || null)} /></label><label className="field">2. Settlements CSV - settlement_id, payment_reference, settlement_date, gross_kobo, fee_kobo, net_kobo<input type="file" accept=".csv" onChange={(e) => setSettlementsFile(e.target.files?.[0] || null)} /></label><label className="field">3. Bank CSV - bank_transaction_id, transaction_date, description, reference, credit_kobo<input type="file" accept=".csv" onChange={(e) => setBankFile(e.target.files?.[0] || null)} /></label></div><div style={{ marginTop: 8, fontSize: 13, color: "#475569" }}>Selected: {ordersFile ? ordersFile.name : "- orders"} - {settlementsFile ? settlementsFile.name : "- settlements"} - {bankFile ? bankFile.name : "- bank"}</div><div className="wizard-actions"><button className="primary-btn" onClick={() => { if (!ordersFile || !settlementsFile || !bankFile) { setReconError("Please select all 3 CSVs first."); return; } setReconError(""); setWizardStep(2); }}>Continue with CSV</button></div></div>)}
               {wizardStep === 2 && (<div className="panel wizard-panel"><h3>Step 2 — Ready to reconcile?</h3><p>Match by reference, then Gross − Fee = Net.</p>{reconError && <p className="error">{reconError}</p>}<div className="wizard-actions"><button className="secondary-btn" onClick={() => setWizardStep(1)}>← Back</button><button className="primary-btn" onClick={runReconciliation} disabled={reconLoading}>{reconLoading ? "Reconciling..." : "Run Reconciliation"}</button></div></div>)}
               {wizardStep === 3 && recon && (<><div className="panel wizard-panel"><h3>Run Complete — {recon.run_id}</h3><div className="cards"><div className="card"><span>TOTAL</span><strong>{fmtInt(recon.total)}</strong><small>Checked</small></div><div className="card"><span>MATCHED</span><strong>{fmtInt(recon.matched)}</strong><small>Clean</small></div><div className="card"><span>EXCEPTIONS</span><strong>{fmtInt(recon.exceptions_count)}</strong><small>Needs investigation</small></div><div className="card"><span>RATE</span><strong>{n(recon.rate)}%</strong><small>Matched rate</small></div></div><div className="wizard-actions"><button className="secondary-btn" onClick={() => { setWizardStep(1); setRecon(null); }}>New Run</button><button className="primary-btn" onClick={() => setPage("exceptions")}>View Exceptions →</button></div></div><div className="panel"><h3>Exceptions ({fmtInt(recon.exceptions_count)})</h3>{asArray<Exc>(recon.exceptions).map((e) => (<div className="row" key={e.id}><div><strong>{e.type}</strong> · {e.id}<br /><small>{e.detail}</small></div><strong>{fmt(e.amount)}</strong></div>))}</div></>)}
             </>
