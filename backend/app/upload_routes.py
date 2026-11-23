@@ -104,13 +104,27 @@ async def upload_and_reconcile(orders: UploadFile = File(...), settlements: Uplo
         for s in all_sett:
             if s.order_ref not in order_pays:
                 db.add(ReconException(type=ExceptionType.NEEDS_REVIEW, status=ExceptionStatus.OPEN, settlement_id=s.id, amount_at_risk_kobo=s.gross_kobo, evidence=f"Orphan settlement {s.processor_ref} for unknown {s.order_ref} {s.gross_kobo}k"))
-        sett_by_id = {s.processor_ref: s for s in all_sett}
+        # Bank matches by PAY-xxxx (order_ref), NOT by SET-xxxx. Narration is "desc | ref:PAY-xxxx"
+        sett_by_pay = {}
+        for s in all_sett:
+            if s.order_ref:
+                sett_by_pay.setdefault(s.order_ref, s)
         for b in all_bank:
-            ref = next((sid for sid in sett_by_id if sid in (b.narration or "")), None)
-            if ref is None:
+            narr = b.narration or ""
+            # Extract ref after "ref:" if present, else search for any PAY-xxxx in narration
+            ref_pay = None
+            if "ref:" in narr:
+                ref_pay = narr.split("ref:", 1)[1].strip().split()[0].strip()
+            if not ref_pay:
+                for pay in sett_by_pay:
+                    if pay and pay in narr:
+                        ref_pay = pay
+                        break
+            sett = sett_by_pay.get(ref_pay) if ref_pay else None
+            if sett is None:
                 db.add(ReconException(type=ExceptionType.ORPHAN_BANK_CREDIT, status=ExceptionStatus.OPEN, bank_txn_id=b.id, amount_at_risk_kobo=b.amount_kobo, evidence=f"Orphan bank {b.bank_ref} {b.amount_kobo}k :: {b.narration}"))
-            elif sett_by_id[ref].net_kobo != b.amount_kobo:
-                db.add(ReconException(type=ExceptionType.FEE_DISCREPANCY, status=ExceptionStatus.OPEN, settlement_id=sett_by_id[ref].id, bank_txn_id=b.id, amount_at_risk_kobo=abs(sett_by_id[ref].net_kobo - b.amount_kobo), evidence=f"Bank {b.bank_ref} {b.amount_kobo}k vs settlement {ref} net {sett_by_id[ref].net_kobo}k"))
+            elif sett.net_kobo != b.amount_kobo:
+                db.add(ReconException(type=ExceptionType.FEE_DISCREPANCY, status=ExceptionStatus.OPEN, settlement_id=sett.id, bank_txn_id=b.id, amount_at_risk_kobo=abs(sett.net_kobo - b.amount_kobo), evidence=f"Bank {b.bank_ref} {b.amount_kobo}k vs settlement {sett.processor_ref} net {sett.net_kobo}k"))
         db.commit()
         exceptions = db.query(ReconException).all()
         return {"ok": True, "TOTAL": len(all_orders), "MATCHED": matched, "EXCEPTIONS": len(exceptions),
