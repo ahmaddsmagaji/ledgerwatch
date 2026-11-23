@@ -1,0 +1,7 @@
+order_id,payment_reference,order_date,customer,amount_kobo,currency,provider,status
+ORD-1001,PAY-1001,2026-11-18,Customer A,2500000,NGN,Paystack,paid
+ORD-1002,PAY-1002,2026-11-18,Customer B,4800000,NGN,Paystack,paid
+ORD-1003,PAY-1003,2026-11-18,Customer C,1250000,NGN,Flutterwave,paid
+ORD-1004,PAY-1004,2026-11-18,Customer D,7000000,NGN,Monnify,paid
+ORD-1005,PAY-1005,2026-11-18,Customer E,3200000,NGN,Flutterwave,paid
+ORD-1006,PAY-1006,2026-11-18,Customer F,1800000,NGN,Paystack,paid
